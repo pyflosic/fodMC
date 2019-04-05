@@ -1,2 +1,3 @@
 # fodMC
-Fermi-orbital descriptor Monte-Carlo. FOD generator
+Fermi-orbital descriptor Monte-Carlo. 
+A FOD generator for the Fermi-Löwdin orbital self-interaction correction method.
