@@ -10,7 +10,7 @@
 There is a manual, explaining the underlying idea of this program and showing some examples for its usage.
 
 
-To compile the code, go to the 'src' directory and type 
+To compile the code, go to the 'src' directory and type   
         bash compile.sh
 
 
