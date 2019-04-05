@@ -15,10 +15,11 @@ To compile the code, go to the 'src' directory and type
 
 
 Go to the folders 'examples'. 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-!!! Change the directory in the run.sh to your src-directory !!! 
-!!! See manual as well                                       !!! 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   
+!!! Change the directory in the run.sh to your src-directory !!!   
+!!! See manual as well                                       !!!   
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   
 Then, type 
 
         bash run.sh
