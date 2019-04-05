@@ -11,6 +11,7 @@ There is a manual, explaining the underlying idea of this program and showing so
 
 
 To compile the code, go to the 'src' directory and type   
+
         bash compile.sh
 
 
