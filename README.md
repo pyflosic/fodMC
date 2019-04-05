@@ -10,16 +10,16 @@
 There is a manual, explaining the underlying idea of this program and showing some examples for its usage.
 
 
-To compile the code, go to the 'src' directory and type
+To compile the code, go to the 'src' directory and type 
         bash compile.sh
 
 
-Go to the folders 'examples'.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Change the directory in the run.sh to your src-directory !!!
-!!! See manual as well                                       !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-Then, type
+Go to the folders 'examples'. 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+!!! Change the directory in the run.sh to your src-directory !!! 
+!!! See manual as well                                       !!! 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+Then, type 
 
         bash run.sh
 
