@@ -1,7 +1,7 @@
 fodMC                                   
 Main developer: Kai Trepte              
                                          
-Fermi-orbital descriptor Monte-Carlo    
+Fermi-orbital descriptor Monte-Carlo:    
 Guess generator for FOD positions to    
 be used in the FLO-SIC method           
 #  
