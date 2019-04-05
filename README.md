@@ -1,8 +1,6 @@
-%#########################################
-
-%# fodMC                                 #
-
-%# Main developer: Kai Trepte            #
+%#########################################  
+%# fodMC                                 #  
+%# Main developer: Kai Trepte            #  
 %#                                       #
 %# Fermi-orbital descriptor Monte-Carlo  #
 %# Guess generator for FOD positions to  #
