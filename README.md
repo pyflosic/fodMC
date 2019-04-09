@@ -1,4 +1,4 @@
-fodMC                                   
+#fodMC                                   
 Main developer: Kai Trepte              
                                          
 Fermi-orbital descriptor Monte-Carlo:    
