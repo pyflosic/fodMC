@@ -1,3 +1,7 @@
+run.sh 
+
+- bash script for exection of the fodMC 
+
 system 
 
 - only the first geometry is calculated
