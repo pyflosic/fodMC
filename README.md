@@ -3,7 +3,8 @@
 Fermi-orbital descriptor Monte-Carlo 
 
 Main developer: Kai Trepte (KT)    
-Sidekicks: Alex Johnson (AJ)   
+Sidekicks: 
+           Alex Johnson (AJ)   
            Jakob Kraus (JK)   
            Sebastian Schwalbe (SS)    
 Coding language: FORTRAN   
