@@ -1,9 +1,12 @@
-# fodMC                                   
-Main developer: Kai Trepte              
+# fodMC      
+
+Fermi-orbital descriptor Monte-Carlo 
+Main developer: Kai Trepte      
+Coding language: FORTRAN   
                                          
-Fermi-orbital descriptor Monte-Carlo:    
-Guess generator for FOD positions to    
-be used in the FLO-SIC method           
+   
+Guess generator for FOD positions to be used in the 
+Fermi-Löwdin self-interaction correction (FLO-SIC) method           
 #  
 
 There is a manual, explaining the underlying idea of this program and showing some examples for its usage.
