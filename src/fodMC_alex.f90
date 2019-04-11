@@ -1000,7 +1000,8 @@ if (number_of_centers == 1) then
 ! GENERATE Nuc_FOD.xyz. For PyFLOSIC
 !
   open(unit=19,file='Nuc_FOD.xyz',status='unknown',action='write')
-  write(19,fmt='(I4)') size(pos1_up)+sum(pos1_up(1)%n_points(:))+sum(pos1_dn(1)%n_points(:))
+  write (junk, '(I8)') size(pos1_up)+sum(pos1_up(1)%n_points(:))+sum(pos1_dn(1)%n_points(:))                       ! number of entries in the xyz file
+  write(19,fmt='(A)') adjustl(junk)
   write(19,*) 'angstrom'
   if (pos1_up(1)%elements(2:2) == '_') then
     write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:1),pos1_up(1)%center_x_y_z(1:3)*0.529177/units_factor ! always in angstrom
@@ -1019,8 +1020,6 @@ if (number_of_centers == 1) then
     end do
   end do
   close(unit=19)
-
-
 
 ! stop here, no need to go any further
 !  stop
@@ -1383,6 +1382,10 @@ else                                                                           !
                       end if
                       ave_dist2 = ave_dist2 + 1.0/tmp_dist
                     end do
+! TBD
+! use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
+
+
                   end if
                 end do
                 ! 
@@ -2435,8 +2438,9 @@ else                                                                           !
   ! GENERATE Nuc_FOD.xyz. For PyFLOSIC
   !
   open(unit=19,file='Nuc_FOD.xyz',status='unknown',action='write')
-  write(19,fmt='(I4)') size(pos1_up)+counter_up+counter_dn
-  write(19,*) 'angstrom'
+  write (junk, '(I4)') size(pos1_up)+counter_up+counter_dn                     ! number of entries in the xyz file
+  write(19,fmt='(A)') adjustl(junk)
+  write(19,fmt='(A)') 'angstrom'
   do a = 1, size(pos1_up)
     if (pos1_up(a)%elements(2:2) == '_') then
       write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:1),pos1_up(a)%center_x_y_z(1:3)*0.529177/units_factor ! always in angstrom
