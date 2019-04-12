@@ -23,7 +23,7 @@ To compile the code, go to the 'src' directory and type
 
 Go to the folders 'examples'. 
 
-## Attention  
+## Attention :heavy_exclamation_mark:  
 Change the directory in the run.sh to your src-directory   
 See manual as well.                                         
 
