@@ -1,1 +1,3 @@
-
+- compile.sh:   compiling fodmc as libary 
+- pyflosic.py:  use fodmc.so as python module 
+- src fodmc:    the src is adjusted module header/subroutine 
