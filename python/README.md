@@ -1,4 +1,4 @@
-#PyFODMC - A simple python backend for the fodMC 
+# PyFODMC - A simple python backend for the fodMC 
 
 * compile.sh:   compiling fodmc as libary 
 * pyflosic.py:  use fodmc.so as python module 
