@@ -15,15 +15,19 @@ Description:
    
 Guess generator for FOD positions to be used in the Fermi-Löwdin orbital self-interaction correction (FLO-SIC) method           
 There is a manual, explaining the underlying idea of this program and showing some examples for its usage.
+
+## Installation 
 The fodMC is written in FORTRAN. Make sure you have a fortran compiler like gfortran to compile the code.
 To compile the code, go to the 'src' directory and type   
 
         bash compile.sh
 
 
+## Running the code 
+
 Go to the folders 'examples'. 
 
-## Attention :heavy_exclamation_mark:  
+#### Attention :heavy_exclamation_mark:  
 Change the directory in the run.sh to your src-directory   
 See manual as well.                                         
 
