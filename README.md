@@ -16,7 +16,7 @@ Coding language: FORTRAN
 
 ## Description
    
-Guess generator for FOD positions to be used in the Fermi-Löwdin orbital self-interaction correction (FLO-SIC) method           
+Guess generator for FOD positions to be used in the Fermi-Löwdin orbital self-interaction correction (FLO-SIC) method.           
 There is a manual, explaining the underlying idea of this program and showing some examples for its usage.
 
 ## Installation 
