@@ -1081,7 +1081,8 @@ else                                                                           !
   do a = 1, size(pos1_up)
     c = 0
     do b = 1, number_of_centers                                                ! if element already in the list -> ignore
-      if ((pos1_up(a)%elements(1:1) == element_symbol(b)) .or. (pos1_up(a)%elements(1:2) == element_symbol(b))) then
+      if ((pos1_up(a)%elements(1:1) == element_symbol(b) .and. (pos1_up(a)%elements(2:2) == ' ')) &   ! avoid confusion betweenn e.g. Na and N
+     .or. (pos1_up(a)%elements(1:2) == element_symbol(b))) then
         c = c + 1
       end if
     end do
