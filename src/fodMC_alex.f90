@@ -1,5 +1,24 @@
 program fodMC
 
+! Copyright    2019    Kai Trepte
+! 
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+! 
+! http://www.apache.org/licenses/LICENSE-2.0
+! 
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License
+
+
+
+
+
+
 ! Author: Kai Trepte
 ! Idea Alex Johnson: Introduce a connectivity matrix to describe how many bonds each atom 
 !                    has to each other atom, create FODs accordingly
@@ -1847,6 +1866,10 @@ else                                                                           !
               exit loop2
             end if
           end do loop2
+          !
+          ! normalize vector
+          !
+          perpendicular_vec(:) = perpendicular_vec(:)/sqrt(sum(perpendicular_vec(:)**2)) 
           ! 
           ! assign center for FOD generation
           !
@@ -1855,11 +1878,17 @@ else                                                                           !
             g = pos1_up(a)%n_points(f)-lone_fods(a,1)+1                                                      ! outermost shell -> get radius of that shell
             bond_center(:) = pos1_up(a)%center_x_y_z(:) + &
             & 1.0/((lone_fods(a,1)+lone_fods(a,2))/2.0)*perpendicular_vec(:)*pos1_up(a)%r_theta_phi(f,g,1)   ! UP channel
+            if ((lone_fods(a,1) == 1) .and. (lone_fods(a,2) == 0)) then                                      ! in case there is only exactly one lone FODs (none in the other spin channel)
+              bond_center(:) = pos1_up(a)%center_x_y_z(:) + perpendicular_vec(:)*pos1_up(a)%r_theta_phi(f,g,1)   
+            end if              
           else if (lone_fods(a,2) > 0) then
             f = pos1_dn(a)%n_shells
             g = pos1_dn(a)%n_points(f)-lone_fods(a,2)+1
             bond_center(:) = pos1_dn(a)%center_x_y_z(:) + &
             & 1.0/((lone_fods(a,1)+lone_fods(a,2))/2.0)*perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(f,g,1)   ! DN
+            if ((lone_fods(a,1) == 0) .and. (lone_fods(a,2) == 1)) then                                      ! in case there is only exactly one lone FODs (none in the other spin channel)
+              bond_center(:) = pos1_up(a)%center_x_y_z(:) + perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(f,g,1)   
+            end if              
           end if
           deallocate(tmp_vectors)
         !
