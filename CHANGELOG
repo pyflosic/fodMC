@@ -38,3 +38,6 @@ DATE USER CHANGE
 19/03/2019    KT        New determination whether atoms are in a planar or linear environment
                         - Determine in the beginning of the generation
                         - Use for bonds and lone FODs if needed
+
+
+TEST
