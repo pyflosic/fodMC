@@ -44,7 +44,6 @@ if __name__ == "__main__":
     write_pyfodmc_atoms(sys='Kr')
     # Fortran call 
     fodmc.fodmc.points_on_sphere_metropolis_spin_centers()
-
     # Simple test for molecule
     sys = 'SO2.xyz'
     con_mat = ['(1-2)-(2-2)','(1-3)-(2-2)','1-(1-1)','2-(2-2)','3-(2-2)']
