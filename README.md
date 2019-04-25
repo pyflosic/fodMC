@@ -4,13 +4,13 @@
 
 Main developer:  
 
-*  Kai Trepte (KT)    
+*  Kai Trepte (KT,trept1k@cmich.edu)    
 
 Sidekicks:  
 
 * Alex Johnson (AJ)   
-* Jakob Kraus (JK)   
-* Sebastian Schwalbe (SS)    
+* Jakob Kraus (JK,jakob.kraus@student.tu-freiberg.de)   
+* Sebastian Schwalbe (SS,theonov13@gmail.com)    
 
 Coding language: FORTRAN   
 
