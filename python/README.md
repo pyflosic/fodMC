@@ -18,5 +18,5 @@ Simply execute the pyfodmc.py script in the bash. There are some examples
 included. (This should be extented in future.) 
 
 ```bash 
-python pyflosic.py
+python pyfodmc.py
 ```
