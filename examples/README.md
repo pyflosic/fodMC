@@ -19,6 +19,9 @@ bash run.sh
 - contains information about the atomic species 
 - different settings for all-electrons and effective-core potentials (ecp)
 
+
+#### clean.sh 
+
 Usage   
 ```bash 
 bash clean.sh
