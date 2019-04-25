@@ -9,7 +9,14 @@ Licence: The same as the fodMC, because it is part of it.
 
 ## Installation 
 You need the fodmc and f2py compiler. 
+```bash 
+bash compile.sh
+```
 
 ## How to use 
 Simply execute the pyfodmc.py script in the bash. There are some examples 
 included. (This should be extented in future.) 
+
+```bash 
+python pyflosic.py
+```
