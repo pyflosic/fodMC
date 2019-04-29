@@ -6,6 +6,7 @@ email: trept1k@cmich.edu
 - all main routines
 
 # co-developers: 
+email: johns1ai@cmich.edu
 Additional features, code testing and improvements.
 
 #### Alex Johnson
