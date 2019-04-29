@@ -6,10 +6,10 @@ email: trept1k@cmich.edu
 - all main routines
 
 # co-developers: 
-email: johns1ai@cmich.edu
 Additional features, code testing and improvements.
 
 #### Alex Johnson
+email: johns1ai@cmich.edu
 - initial idea for the connectivity matrix 
 
 #### Jakob Kraus, B. Sc. 
