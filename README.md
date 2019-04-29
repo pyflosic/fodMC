@@ -20,7 +20,7 @@ Guess generator for FOD positions to be used in the Fermi-Löwdin orbital self-i
 There is a manual, explaining the underlying idea of this program and showing some examples for its usage.
 
 ## Installation 
-The fodMC is written in FORTRAN. Make sure you have a fortran compiler like gfortran to compile the code.
+The fodMC is written in FORTRAN. Make sure you have a fortran compiler like gfortran to compile the code.  
 To compile the code, go to the *src* directory and type   
 
         bash compile.sh
