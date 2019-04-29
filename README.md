@@ -30,7 +30,7 @@ To compile the code, go to the *src* directory and type
 
 Go to the folders *examples*. 
 
-You might want to change the relativ directory paths in the run.sh to your absolute src-directory (see manual as well).                                         
+You might want to change the relative directory paths in the run.sh to your absolute src-directory (see manual as well).                                         
 
 Then, type 
 
