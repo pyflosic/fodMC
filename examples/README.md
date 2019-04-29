@@ -1,6 +1,6 @@
 #### run.sh 
 
-- bash script for exection of the fodMC
+- bash script for execution of the fodMC
 
 Usage  
 ```bash 
@@ -17,7 +17,7 @@ bash run.sh
 #### xx_database_xx 
 
 - contains information about the atomic species 
-- different settings for all-electrons and effective-core potentials (ecp)
+- different settings for all-electron and effective-core potentials (ecp)
 
 
 #### clean.sh 
