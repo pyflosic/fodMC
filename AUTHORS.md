@@ -12,7 +12,8 @@ Additional features, code testing and improvements.
 - inital idea for the connectivity matrix 
 
 #### Jakob Kraus, B. Sc. 
-- improvment for the connecticity matrix 
+email: jakob.kraus@student.tu-freiberg.de
+- improvement for the connectivity matrix 
 
 #### Sebastian Schwalbe, M. Sc.  
 email: theonov13@gmail.com
