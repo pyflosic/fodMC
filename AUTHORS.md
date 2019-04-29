@@ -9,7 +9,7 @@ email: trept1k@cmich.edu
 Additional features, code testing and improvements.
 
 #### Alex Johnson
-- inital idea for the connectivity matrix 
+- initial idea for the connectivity matrix 
 
 #### Jakob Kraus, B. Sc. 
 email: jakob.kraus@student.tu-freiberg.de
