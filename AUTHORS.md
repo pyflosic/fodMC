@@ -19,4 +19,4 @@ email: jakob.kraus@student.tu-freiberg.de
 email: theonov13@gmail.com
 - pyfodmc 
 - source code structuring 
-- ideas for improvements of the fodmc 
+- ideas for improvements of the fodmc (simplification of input) 
