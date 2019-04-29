@@ -3,7 +3,8 @@ Coding language: python
 Author: Seabstian Schwalbe  
 Licence: The same as the fodMC, because it is part of it. 
 
-* compile.sh:   compiling fodmc as libary 
+* compile.sh:   compiling fodmc as libary (changes in fodmc_alex.f90 needed)
+                
 * pyfodmc.py:  use fodmc.so as python module 
 * src fodmc:    the src is adjusted module header/subroutine 
 
