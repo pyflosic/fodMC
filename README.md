@@ -21,14 +21,14 @@ There is a manual, explaining the underlying idea of this program and showing so
 
 ## Installation 
 The fodMC is written in FORTRAN. Make sure you have a fortran compiler like gfortran to compile the code.
-To compile the code, go to the 'src' directory and type   
+To compile the code, go to the *src* directory and type   
 
         bash compile.sh
 
 
 ## Running the code 
 
-Go to the folders 'examples'. 
+Go to the folders *examples*. 
 
 #### Attention :heavy_exclamation_mark:  
 Change the directory in the run.sh to your src-directory (see manual as well).                                         
@@ -37,4 +37,4 @@ Then, type
 
         bash run.sh
 
-to run the code for a given input in the file 'system'.
+to run the code for a given input in the file *system*.
