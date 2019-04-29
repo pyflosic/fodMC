@@ -2,7 +2,7 @@
 #### 21/01/2019    KT
 - Change input format according to (center1-center2)-(UP_FODS-DN_FODs)
 - this gives a simpler way of initializing any bond order
-- in reduces the number of inputs. There is exactly one input for each pair of atoms (in contrast to what there was before)
+- it reduces the number of inputs. There is exactly one input for each pair of atoms (in contrast to what there was before)
 - 3-electron bonds (or any other number of electrons) can be easily initialized, e.g. (1-2)-(3-2) or (1-2)-(1-2)   (in the second example, there will be more DN than UP FODs)
 - lone FODs need to be initialized for all atoms BESIDES H
 
@@ -44,7 +44,7 @@
 
 #### 19/03/2019    KT 
 - New determination whether atoms are in a planar or linear environment
-- Determine in the beginning of the generation
+- Determine in the beginning of the code
 - Use for bonds and lone FODs if needed
 
 #### 29/04/2019    SS 
