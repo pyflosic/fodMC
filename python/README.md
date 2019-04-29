@@ -21,3 +21,8 @@ included. (This should be extented in future.)
 ```bash 
 python pyfodmc.py
 ```
+
+To clean the directory use the following command 
+```bash
+bash clean.sh 
+```
