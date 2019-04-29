@@ -39,7 +39,7 @@ program fodMC
 ! 05. February 2019
 ! Rotate double bonds in linear molecules against each other (e.g. Lewis structure of CO2)
 ! 08. February 2019
-! More consistent treatment of initial points for lone-FODs (now scaled with (FOD_UP*FOD_DN)/2)
+! More consistent treatment of initial points for lone-FODs (now scaled with (FOD_UP+FOD_DN)/2)
 ! Point charge dipole as output (excluding 1s core-FODs)
 ! Change initial assessment of single bonds via covalent radii of the elements (Thanks to Jakob Krause) - revoke changes from 23. January
 ! Initial lone FODs are place per atom assuming charge neutrality of the system. Taking the bond information into account.
@@ -103,7 +103,7 @@ real(8)              :: ave_dist1_up, ave_dist2_up            ! average distance
 real(8)              :: ave_dist1_dn, ave_dist2_dn            ! average distances or 1/r. Before and after MC step. DN channel. For all or valence FODs
 real(8)              :: ave_dist1, ave_dist2                  ! average distances or 1/r. Before and after MC step. Globally
 real(8)              :: tmp_dist                              ! temporary distance for evaluation using PBCs
-integer(kind=8)      :: cycles                                ! maximum number of steps     
+integer              :: cycles                                ! maximum number of steps     
 real(8)              :: step_size                             ! maximal step size per point
 integer              :: a,b,c,d,e,f,g,h,i,j,t                 ! loop variable
 real(8)              :: start_t, finish_t                     ! start and finish time
