@@ -49,5 +49,5 @@
 
 #### 29/04/2019    SS 
 - Modified pyfodmc
-- Changed verious files to markdown files 
+- Changed various files to markdown files 
 - changed absolute path in run.sh to relative path 
