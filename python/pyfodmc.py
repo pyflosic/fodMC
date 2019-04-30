@@ -6,7 +6,7 @@
 import fodmc as fodmc 
 from ase.io import read,write  
 
-def write_pyfodmc_atoms(sys,mc_steps=10000,mc_size=0.001):
+def write_pyfodmc_atoms(sys):
     #
     # write fodmc input for atoms 
     #
@@ -14,10 +14,7 @@ def write_pyfodmc_atoms(sys,mc_steps=10000,mc_size=0.001):
     f = open('system','w')
     f.write('1 %s\n' % sys)
     f.write('bohr\n')
-    f.write('%s 0.0 0.0 0.0\n' %sys)
-    f.write('simulation (MC steps, step size)\n')
-    f.write('%1.f\n'  %mc_steps)
-    f.write('%0.8f\n' %mc_size)
+    f.write('%s 0.0 0.0 0.0\n\n' %sys)
     f.close()
 
 def write_pyfodmc_molecules(sys,con_mat):
@@ -46,7 +43,7 @@ if __name__ == "__main__":
     fodmc.fodmc.points_on_sphere_metropolis_spin_centers()
     # Simple test for molecule
     sys = 'SO2.xyz'
-    con_mat = ['(1-2)-(2-2)','(1-3)-(2-2)','1-(1-1)','2-(2-2)','3-(2-2)']
+    con_mat = ['(1-2)-(2-2)','(1-3)-(2-2)\n']
     write_pyfodmc_molecules(sys=sys,con_mat=con_mat)
     # Fortran call 
     fodmc.fodmc.points_on_sphere_metropolis_spin_centers()
