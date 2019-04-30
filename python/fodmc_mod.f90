@@ -106,7 +106,7 @@ real(8)              :: ave_dist1_up, ave_dist2_up            ! average distance
 real(8)              :: ave_dist1_dn, ave_dist2_dn            ! average distances or 1/r. Before and after MC step. DN channel. For all or valence FODs
 real(8)              :: ave_dist1, ave_dist2                  ! average distances or 1/r. Before and after MC step. Globally
 real(8)              :: tmp_dist                              ! temporary distance for evaluation using PBCs
-integer(kind=8)      :: cycles                                ! maximum number of steps     
+integer              :: cycles                                ! maximum number of steps     
 real(8)              :: step_size                             ! maximal step size per point
 integer              :: a,b,c,d,e,f,g,h,i,j,t                 ! loop variable
 real(8)              :: start_t, finish_t                     ! start and finish time
