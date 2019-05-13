@@ -51,3 +51,8 @@
 - Modified pyfodmc
 - Changed various files to markdown files 
 - changed absolute path in run.sh to relative path 
+
+#### 13/05/2019    KT
+- Added the 'fix1s' option
+- This keyword can be added right next to the specified units (2nd line in the 'system' file)
+- If used, the 1s FODs for all atoms will be placed at the atomic positions
