@@ -84,6 +84,7 @@ real(8), allocatable           :: covalent_R(:)     ! list covalent radii
 character(len=2), allocatable  :: element_symbol(:) ! element symbols
 character(len=4), allocatable  :: element_count(:)  ! number of specific type of element
 logical                        :: periodic          ! keywords determining whether PBCs shall be used or not
+logical                        :: fix1s             ! keywords determining whether to fix the 1s FODs at the nuclei
 real(8)                        :: cell_a(3), cell_b(3), cell_c(3)   ! unit cell vectors. In case of PBCs
 real(8)                        :: len_a, len_b, len_c, V_tot        ! length of unit cell vectors and total volume of the unit cell. In case of PBCs
 real(8)                        :: angle_ab, angle_bc,  angle_ac     ! angles between unit cell vectors. In case of PBCs
@@ -92,7 +93,7 @@ character(len=25)              :: formatBLA
 character(len=25)              :: formatBLA2
 
 ! Reading database -> need junk
-character(len=17)              :: junk
+character(len=17)              :: junk, junk2
 character(len=8)               :: units             ! either bohr or angstrom . 
 real(8)                        :: units_factor      ! conversion factor to bohr. 
 
@@ -158,7 +159,7 @@ allocate(element_number(number_of_centers))
 allocate(pseudo_charge(number_of_centers))
 allocate(core_charge(number_of_centers))
 
-read(17,*) units, junk                                                          ! read in the unit to be used (angstrom or bohr). and whether PBCs shall be used or not
+read(17,*) units, junk, junk2                                                   ! read in the unit to be used (angstrom or bohr). and whether PBCs shall be used or not. And whether to fix the 1s FODs at the origin
 if ((units == 'angstrom') .or. (units == 'Angstrom')) then
   units_factor = 0.529177
 else if ((units == 'bohr') .or. (units == 'Bohr')) then
@@ -167,11 +168,24 @@ else
   write(6,*) 'Specified unit is neither angstrom nor bohr. Please check the second line of the file "system"'
   stop
 end if
-if (junk == 'pbc') then
+!
+! If PBCs and/or fixing 1s at the nuclear positions
+!
+if ((junk == 'pbc' .and. junk2 == 'fix1s') .or. (junk == 'fix1s' .and. junk2 == 'pbc')) then
   periodic = .true.
+  fix1s = .true.
+else if (junk == 'pbc') then
+  periodic = .true.
+  fix1s = .false.
+  backspace(17)                                                                ! If one of the keywords is missing -> need to go one line back up
+else if (junk == 'fix1s') then
+  periodic = .false.
+  fix1s = .true.
+  backspace(17)                                                                ! If one of the keywords is missing -> need to go one line back up
 else
   periodic = .false.
-  backspace(17)                                                                ! for a cluster calculation, there is no keyword -> need to go one line back up
+  fix1s = .false.
+  backspace(17)                                                                ! If both keywords are missing -> need to go one line back up
 end if
 
 do a = 1, number_of_centers
@@ -266,6 +280,22 @@ if (number_of_centers == 1) then
       t = t + 1                                                                ! once everything is done, terminate the while loop
     end if
   end do
+
+!
+! Put all 1s core FODs (index (1,1,1:3)) at the origin
+!
+  if (fix1s) then
+    pos1_up(a)%r_theta_phi(1,1,1:3) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /) 
+    pos1_up(a)%point_x_y_z(1,1,1:3) = pos1_up(a)%center_x_y_z(1:3)
+    pos2_up(a)%r_theta_phi(1,1,1:3) = pos1_up(a)%r_theta_phi(1,1,1:3)
+    pos2_up(a)%point_x_y_z(1,1,1:3) = pos1_up(a)%point_x_y_z(1,1,1:3)
+    pos1_dn(a)%r_theta_phi(1,1,1:3) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /) 
+    pos1_dn(a)%point_x_y_z(1,1,1:3) = pos1_dn(a)%center_x_y_z(1:3)
+    pos2_dn(a)%r_theta_phi(1,1,1:3) = pos1_dn(a)%r_theta_phi(1,1,1:3)
+    pos2_dn(a)%point_x_y_z(1,1,1:3) = pos1_dn(a)%point_x_y_z(1,1,1:3)
+  end if
+
+
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -689,6 +719,26 @@ else
       end do
     end if
   end do
+
+!
+! Put all 1s core FODs (index (1,1,1:3)) at the origin
+!
+  if (fix1s) then
+    do a = 1, number_of_centers 
+      pos1_up(a)%r_theta_phi(1,1,1:3) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+      pos1_up(a)%point_x_y_z(1,1,1:3) = pos1_up(a)%center_x_y_z(1:3)
+      pos2_up(a)%r_theta_phi(1,1,1:3) = pos1_up(a)%r_theta_phi(1,1,1:3)
+      pos2_up(a)%point_x_y_z(1,1,1:3) = pos1_up(a)%point_x_y_z(1,1,1:3)
+      pos1_dn(a)%r_theta_phi(1,1,1:3) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+      pos1_dn(a)%point_x_y_z(1,1,1:3) = pos1_dn(a)%center_x_y_z(1:3)
+      pos2_dn(a)%r_theta_phi(1,1,1:3) = pos1_dn(a)%r_theta_phi(1,1,1:3)
+      pos2_dn(a)%point_x_y_z(1,1,1:3) = pos1_dn(a)%point_x_y_z(1,1,1:3)
+    end do
+  end if
+! END new
+
+
+
 end if
 
 !!!!!!!!!!!!!!!!!!!
