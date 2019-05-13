@@ -735,9 +735,6 @@ else
       pos2_dn(a)%point_x_y_z(1,1,1:3) = pos1_dn(a)%point_x_y_z(1,1,1:3)
     end do
   end if
-! END new
-
-
 
 end if
 
