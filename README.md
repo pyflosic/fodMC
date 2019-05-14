@@ -37,3 +37,8 @@ Then, type
         bash run.sh
 
 to run the code for a given input in the file *system*.
+
+## Tutorial
+
+Several tutorial videos about the usage and handling of the fodMC can be found at youtube, 
+at the channel 'The extended Physiker Clan'.
