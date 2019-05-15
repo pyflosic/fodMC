@@ -54,6 +54,8 @@ program fodMC
 ! New determination whether atoms are in a planar or linear environment. Much clearer now
 ! 13. May 2019
 ! Introduce 'fix1s' option. Allows to place all 1s FODs at the atomic positions
+! 15. May 2019
+! Re-introduced the distribution of points on a sphere
 
 implicit none
 ! new array structure: 3 real     (coordinates of center)
