@@ -10,6 +10,13 @@
 # radius_DN_1   	number_of_points_DN_1
 # ...
 #############################################
+######################################
+# DISTRIBUTION OF POINTS ON A SPHERE #  CAN BE ADJUSTED BY THE USER
+######################################
+POS    1  0  0    0.000    points-on-sphere
+1 1
+1.889726878   10
+1.889726878   0
 ##################
 ## ALL-ELECTRON ##
 ##################

@@ -52,6 +52,8 @@ program fodMC
 ! Simplify the specification for different amount of UP and DN bond FODs. Now, the specification (45-31)-(3-2) will automatically assign the correct number of bond FODs between the atoms, regardless of their order
 ! 19. March 2019
 ! New determination whether atoms are in a planar or linear environment. Much clearer now
+! 13. May 2019
+! Introduce 'fix1s' option. Allows to place all 1s FODs at the atomic positions
 
 implicit none
 ! new array structure: 3 real     (coordinates of center)
@@ -774,17 +776,33 @@ close(unit=18) ! close 'xx_database_xx'
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 if (number_of_centers == 1) then
-  a = 1
-  charge = 0.0
-  spin = 0.0
+!
+! If distribution of points on a sphere is wanted -> change number of MC steps and step size
+!
+  if (pos1_up(1)%elements == 'POS') then
+    write(6,*) ' '
+    write(6,*) '!!! POINTS ON A SPHERE WITH ', sum(pos1_up(1)%n_points(:)), ' UP and ',sum(pos1_dn(1)%n_points(:)),' DN'
+    write(6,*) ' '
+    write(6,*) 'How many Monte-Carlo steps?'
+    read(5,*) cycles
+    write(6,*) 'What step-size?'
+    read(5,*) step_size
+!
+! ELSE: For an atomic guess generation
+!
+  else
+    a = 1
+    charge = 0.0
+    spin = 0.0
 
-  charge     = real(element_number(1) - pseudo_charge(1) - &
-             & sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
-  spin       = real(sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
+    charge     = real(element_number(1) - pseudo_charge(1) - &
+               & sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
+    spin       = real(sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
 
-  write(6,*) ' '
-  write(6,*) '!!! ATOMIC GUESS WILL BE CREATED FOR  ', pos1_up(1)%elements, '  charge = ',charge,' spin = ',spin
-  write(6,*) ' '
+    write(6,*) ' '
+    write(6,*) '!!! ATOMIC GUESS WILL BE CREATED FOR  ', pos1_up(1)%elements, '  charge = ',charge,' spin = ',spin
+    write(6,*) ' '
+  end if
 
 !!!!!!!!!!!!!!!!!!!!!
 ! CORE OPTIMIZATION !
@@ -919,6 +937,7 @@ if (number_of_centers == 1) then
   end do                                                                       ! end MC cycles for valence optimization
 
 ! Some output regarding the optimizations
+  write(6,*) ' '
   write(6,*) '### Final 1/r ###'
   write(6,*) 'up_core        ', ave_dist1_up_core 
   write(6,*) 'dn_core        ', ave_dist1_dn_core
@@ -1029,66 +1048,90 @@ if (number_of_centers == 1) then
   write(6,*) 'Total CPU time ',finish_t - start_t,'s'
 
 !
+! If distribution of points on a sphere
+!
+  if (pos1_up(1)%elements == 'POS') then
+    open(unit=19,file='points_on_sphere.xyz',status='unknown',action='write')
+    write (junk, '(I8)') size(pos1_up)+sum(pos1_up(1)%n_points(:))+sum(pos1_dn(1)%n_points(:))-1                     ! number of entries in the xyz file. Exclude 'atom'
+    write(19,fmt='(A)') adjustl(junk)
+    write(19,*) 'points on a sphere'
+    d = 1
+    do b = 1, pos1_up(d)%n_shells
+      do c = 1, pos1_up(d)%n_points(b)
+        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+      end do
+    end do
+    do b = 1, pos1_dn(d)%n_shells
+      do c = 1, pos1_dn(d)%n_points(b)
+        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+      end do
+    end do
+    close(unit=19)
+
+!
+! For atomic guess generation
+!
+  else 
+!
 ! GENERATE CLUSTER AND FRMORB FILE for NRLMOL
 !
-  charge = real(element_number(1) - pseudo_charge(1) - sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
-  spin   = real(sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
-  open(unit=19,file='CLUSTER',status='unknown',action='write')
-  write(19,*) 'LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)'
-  write(19,*) 'NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)'
-  write(19,*) '1                            (NUMBER OF ATOMS)'
-  if ((pos1_up(1)%elements(3:5) == 'ECP') .or. (pos1_up(1)%elements(4:6) == 'ECP')) then
-    write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(1)%center_x_y_z(1:3)/units_factor, element_number(1), & 
-                 & '  ECP (R, Z, Pseudopotential)'
-  else
-    write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(1)%center_x_y_z(1:3)/units_factor, element_number(1), &
-                 & '  ALL (R, Z, ALL-ELECTRON)'
-  end if
-  write(19,fmt='(2(F6.3,2X),19X,A)') charge, spin, '(NET CHARGE AND NET SPIN)'
-  close(unit=19)
+    charge = real(element_number(1) - pseudo_charge(1) - sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
+    spin   = real(sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
+    open(unit=19,file='CLUSTER',status='unknown',action='write')
+    write(19,*) 'LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)'
+    write(19,*) 'NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)'
+    write(19,*) '1                            (NUMBER OF ATOMS)'
+    if ((pos1_up(1)%elements(3:5) == 'ECP') .or. (pos1_up(1)%elements(4:6) == 'ECP')) then
+      write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(1)%center_x_y_z(1:3)/units_factor, element_number(1), & 
+                   & '  ECP (R, Z, Pseudopotential)'
+    else
+      write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(1)%center_x_y_z(1:3)/units_factor, element_number(1), &
+                   & '  ALL (R, Z, ALL-ELECTRON)'
+    end if
+    write(19,fmt='(2(F6.3,2X),19X,A)') charge, spin, '(NET CHARGE AND NET SPIN)'
+    close(unit=19)
 
-  open(unit=19,file='FRMORB',status='unknown',action='write')
-  write(19,fmt='(I3,5X,I3)') sum(pos1_up(1)%n_points(:)), sum(pos1_dn(1)%n_points(:))
-  d = 1
-  do b = 1, pos1_up(d)%n_shells
-    do c = 1, pos1_up(d)%n_points(b)
-      write(19,*) pos1_up(d)%point_x_y_z(b,c,1:3)/units_factor
+    open(unit=19,file='FRMORB',status='unknown',action='write')
+    write(19,fmt='(I3,5X,I3)') sum(pos1_up(1)%n_points(:)), sum(pos1_dn(1)%n_points(:))
+    d = 1
+    do b = 1, pos1_up(d)%n_shells
+      do c = 1, pos1_up(d)%n_points(b)
+        write(19,*) pos1_up(d)%point_x_y_z(b,c,1:3)/units_factor
+      end do
     end do
-  end do
-  do b = 1, pos1_dn(d)%n_shells
-    do c = 1, pos1_dn(d)%n_points(b)
-      write(19,*) pos1_dn(d)%point_x_y_z(b,c,1:3)/units_factor
+    do b = 1, pos1_dn(d)%n_shells
+      do c = 1, pos1_dn(d)%n_points(b)
+        write(19,*) pos1_dn(d)%point_x_y_z(b,c,1:3)/units_factor
+      end do
     end do
-  end do
-  close(unit=19)
+    close(unit=19)
 
 !
 ! GENERATE Nuc_FOD.xyz. For PyFLOSIC
 !
-  open(unit=19,file='Nuc_FOD.xyz',status='unknown',action='write')
-  write (junk, '(I8)') size(pos1_up)+sum(pos1_up(1)%n_points(:))+sum(pos1_dn(1)%n_points(:))                       ! number of entries in the xyz file
-  write(19,fmt='(A)') adjustl(junk)
-  write(19,*) 'angstrom'
-  if (pos1_up(1)%elements(2:2) == '_') then
-    write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:1),pos1_up(1)%center_x_y_z(1:3)*0.529177/units_factor ! always in angstrom
-  else
-    write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:2),pos1_up(1)%center_x_y_z(1:3)*0.529177/units_factor
-  end if
-  d = 1
-  do b = 1, pos1_up(d)%n_shells
-    do c = 1, pos1_up(d)%n_points(b)
-      write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+    open(unit=19,file='Nuc_FOD.xyz',status='unknown',action='write')
+    write (junk, '(I8)') size(pos1_up)+sum(pos1_up(1)%n_points(:))+sum(pos1_dn(1)%n_points(:))                       ! number of entries in the xyz file
+    write(19,fmt='(A)') adjustl(junk)
+    write(19,*) 'angstrom'
+    if (pos1_up(1)%elements(2:2) == '_') then
+      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:1),pos1_up(1)%center_x_y_z(1:3)*0.529177/units_factor ! always in angstrom
+    else
+      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:2),pos1_up(1)%center_x_y_z(1:3)*0.529177/units_factor
+    end if
+    d = 1
+    do b = 1, pos1_up(d)%n_shells
+      do c = 1, pos1_up(d)%n_points(b)
+        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+      end do
     end do
-  end do
-  do b = 1, pos1_dn(d)%n_shells
-    do c = 1, pos1_dn(d)%n_points(b)
-      write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+    do b = 1, pos1_dn(d)%n_shells
+      do c = 1, pos1_dn(d)%n_points(b)
+        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+      end do
     end do
-  end do
-  close(unit=19)
+    close(unit=19)
 
-! stop here, no need to go any further
-!  stop
+  end if
 
 
 
@@ -1451,7 +1494,7 @@ else                                                                           !
                     end do
 ! TBD
 ! use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
-
+! same for DN channel
 
                   end if
                 end do
