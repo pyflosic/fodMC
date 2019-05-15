@@ -1027,6 +1027,11 @@ if (number_of_centers == 1) then
               ave_dist2 = ave_dist2 + &
                     1.0/sqrt(sum((pos1_up(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(e,f,:))**2))
             else
+              ! For points on a sphere -> evaluate 1s contributions
+              if (pos1_up(a)%elements == 'POS') then
+                ave_dist2  = ave_dist2 + &
+                  1.0/sqrt(sum((pos1_up(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(e,f,:))**2))
+              end if
               if ((b == 1) .and. (e == 1)) then                                ! avoid evaluating 1s UP and 1s DN (largest contribution) -> makes optimization extremely inefficient !!
               else
                 ave_dist2  = ave_dist2 + &
