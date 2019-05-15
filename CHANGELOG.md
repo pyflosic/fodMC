@@ -57,7 +57,7 @@
 - This keyword can be added right next to the specified units (2nd line in the 'system' file)
 - If used, the 1s FODs for all atoms will be placed at the atomic positions
 
-### 15/05/2019     KT
+#### 15/05/2019     KT
 - Re-introduced the possibility to distribution points on a sphere
 - Use 'POS' as an element specifier. Use '1' for the number of atoms
 - In xx_databse_xx, modify the number of points to distribute
