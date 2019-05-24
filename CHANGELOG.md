@@ -66,4 +66,4 @@
 - Introduce structural motifs
 - Use these for atoms and core FODs
 - No distribution of points on a sphere necessary for such FODs
-
+- Further, a Metropolis-like algorithm is now used for the rotation of core vs. valence FODs
