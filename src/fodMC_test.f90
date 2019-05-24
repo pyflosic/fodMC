@@ -56,6 +56,10 @@ program fodMC
 ! Introduce 'fix1s' option. Allows to place all 1s FODs at the atomic positions
 ! 15. May 2019
 ! Re-introduced the distribution of points on a sphere
+! 24. May 2019
+! Introduce structural motifs. Use these for atoms and core FODs. Thus, no distribution of 
+! points on a sphere necessary for such FODs.
+! Further, a Metropolis-like algorithm is now used for the rotation of core vs. valence FODs.
 
 implicit none
 ! new array structure: 3 real     (coordinates of center)
