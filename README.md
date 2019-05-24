@@ -25,6 +25,9 @@ To compile the code, go to the *src* directory and type
 
         bash compile.sh
 
+There are now two executables. 'fodMC' is the original code, while 'fodMC_test' uses structural motifs 
+for the generation of atomic guesses and core FODs. Thus, in this version these FODs are not generated 
+by the distribution of points on a sphere (beta test version).
 
 ## Running the code 
 
@@ -37,6 +40,7 @@ Then, type
         bash run.sh
 
 to run the code for a given input in the file *system*.
+If you want to use 'fodMC_test', you need to change the executable name in the run.sh file.
 
 ## Manual/Tutorial
 
