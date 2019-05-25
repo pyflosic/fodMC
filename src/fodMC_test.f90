@@ -826,7 +826,54 @@ if (number_of_centers == 1) then
                         pos1_up(a)%center_x_y_z(1:3),pos1_up(a)%point_x_y_z(b,c,1:3))
       pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
     end do
-  end do
+    !
+    ! Optimize core structure globally (via rotations) with respect to any smaller shell
+    !
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! ROTATIONS                                              !
+    ! Rotate current core against any lower core. UP Channel !
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if ((b > 1) .and. (b <= pos1_up(a)%n_shells)) then                             ! any shell except the 1s. 
+      ave_dist1_up = 100000000.0
+      do t = 1, cycles
+        call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
+        do c = 1, pos1_up(a)%n_points(b)
+          call rotate_pos(full_rot, pos1_up(a)%point_x_y_z(b,c,1:3), &
+                          pos1_up(a)%center_x_y_z(1:3), pos2_up(a)%point_x_y_z(b,c,1:3))
+        end do
+        !
+        ! 1/r calculation
+        !
+        ave_dist2_up = 0.0                                                         ! 1/r UP
+        do c = 1, pos2_up(a)%n_points(b)
+          do d = 1, b-1                                                            ! Use any smaller shell structure and optimize the higher shell according to the lower core structure
+            do f = 1, pos1_up(a)%n_points(d)                                       ! Unchanged index, thus index 1
+              ave_dist2_up  = ave_dist2_up + &
+                     1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(d,f,:))**2))
+            end do
+          end do
+        end do
+        !
+        ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
+        ! How: ... Introduce random number rand_metro [0,1]
+        !          if (ave_dist2_up < ave_dist1_up) -> take new config
+        !          if (ave_dist2_up > ave_dist1_up) -> if (ave_dist2_up-ave_dist1_up) < rand_metro*step_size => still take new config. Else: Take old config.
+        !          ==>> If new 1/r is only slighlty larger AND rand_metro*step_size is small enough
+        if (ave_dist2_up < ave_dist1_up) then
+          pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
+          pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
+          ave_dist1_up = ave_dist2_up
+        else
+          call random_number(rand_metro)
+          if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size) then
+            pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
+            pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
+            ave_dist1_up = ave_dist2_up
+          end if
+        end if
+      end do  ! end MC cycles
+    end if    ! end if - shells
+  end do      ! end UP channel
   !
   ! Get DN CHANNEL  
   !
@@ -836,307 +883,108 @@ if (number_of_centers == 1) then
                         pos1_dn(a)%center_x_y_z(1:3),pos1_dn(a)%point_x_y_z(b,c,1:3))
       pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
     end do
-  end do
-! END NEW
-
-
-
-!!!!!!!!!!!!!!!!!!!!!
-! CORE OPTIMIZATION !
-!!!!!!!!!!!!!!!!!!!!!
-! OLD, MC OPTIMIZATION. MAYBE KEEP FOR NOW
-!!!  ave_dist1_up_core = 1000000.0
-!!!  ave_dist1_dn_core = 1000000.0
-!!!
-!!!  do t = 1, cycles
-!!!! OPTIMIZE UP CHANNEL !
-!!!    do b = 1, pos1_up(a)%n_shells-1                                            ! exclude outermost (valence) shell -> core
-!!!      do c = 1, pos1_up(a)%n_points(b)
-!!!        call mc_step(pos1_up(a)%r_theta_phi(b,c,1:3), &
-!!!                     pos1_up(a)%center_x_y_z(1:3),    &                        ! single MC step to change the pos
-!!!                     pos2_up(a)%r_theta_phi(b,c,1:3), &
-!!!                     pos2_up(a)%point_x_y_z(b,c,1:3), step_size)
-!!!      end do
-!!!    end do
-!!!! 1/r calculation
-!!!    ave_dist2_up_core = 0.0
-!!!    do b = 1, pos2_up(a)%n_shells-1                                            ! exclude valence shell
-!!!      do c = 1, pos2_up(a)%n_points(b)
-!!!        do e = 1, pos2_up(a)%n_shells-1                                        ! exclude valence shell
-!!!          do f = 1, pos2_up(a)%n_points(e)
-!!!            if ((b == e) .and. (c == f)) then                                  ! for same atom, same shell, same point -> DO NOT EVALUATE 1/r !!
-!!!            else
-!!!              ave_dist2_up_core = ave_dist2_up_core + &
-!!!                       1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos2_up(a)%point_x_y_z(e,f,:))**2))
-!!!            end if
-!!!          end do
-!!!        end do
-!!!      end do
-!!!    end do
-!!!! keep configuration?
-!!!    if (ave_dist2_up_core < ave_dist1_up_core) then
-!!!      pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
-!!!      pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
-!!!      ave_dist1_up_core = ave_dist2_up_core
-!!!    end if
-!!!
-!!!    do b = 1, pos1_dn(a)%n_shells-1                                            ! exclude outermost (valence) shell -> core
-!!!      do c = 1, pos1_dn(a)%n_points(b)
-!!!        call mc_step(pos1_dn(a)%r_theta_phi(b,c,1:3), &
-!!!                     pos1_dn(a)%center_x_y_z(1:3),    &                        ! single MC step to change the pos
-!!!                     pos2_dn(a)%r_theta_phi(b,c,1:3), &
-!!!                     pos2_dn(a)%point_x_y_z(b,c,1:3), step_size)
-!!!      end do
-!!!    end do
-!!!! 1/r calculation
-!!!    ave_dist2_dn_core = 0.0
-!!!    do b = 1, pos2_dn(a)%n_shells-1                                            ! exclude valence shell 
-!!!      do c = 1, pos2_dn(a)%n_points(b)
-!!!        do e = 1, pos2_dn(a)%n_shells-1                                        ! exclude valence shell
-!!!          do f = 1, pos2_dn(a)%n_points(e)
-!!!            if ((b == e) .and. (c == f)) then                                  ! for same atom, same shell, same point -> DO NOT EVALUTE 1/r !!
-!!!            else
-!!!              ave_dist2_dn_core = ave_dist2_dn_core + &
-!!!                       1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(e,f,:))**2))
-!!!            end if
-!!!          end do
-!!!        end do
-!!!      end do
-!!!    end do
-!!!! keep configuration?
-!!!    if (ave_dist2_dn_core < ave_dist1_dn_core) then
-!!!      pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-!!!      pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-!!!      ave_dist1_dn_core = ave_dist2_dn_core
-!!!    end if
-!!!  end do                                                                       ! end MC cycles for core optimization
-!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!! VALENCE OPTIMIZATION !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!  ave_dist1_up      = 1000000.0                                                ! initialize per atom
-!!!  ave_dist1_dn      = 1000000.0
-!!!
-!!!  do t = 1, cycles
-!!!! OPTIMIZE UP CHANNEL !
-!!!    b = pos1_up(a)%n_shells                                                    ! outermost shell -> valence
-!!!    do c = 1, pos1_up(a)%n_points(b)
-!!!      call mc_step(pos1_up(a)%r_theta_phi(b,c,1:3), &
-!!!                   pos1_up(a)%center_x_y_z(1:3),    &                          ! single MC step to change the positions
-!!!                   pos2_up(a)%r_theta_phi(b,c,1:3), &
-!!!                   pos2_up(a)%point_x_y_z(b,c,1:3), step_size)
-!!!    end do
-!!!! 1/r calculation
-!!!    ave_dist2_up = 0.0
-!!!    b = pos2_up(a)%n_shells
-!!!    do c = 1, pos2_up(a)%n_points(b)
-!!!      e = pos2_up(a)%n_shells
-!!!      do f = 1, pos2_up(a)%n_points(e)
-!!!        if ((b == e) .and. (c == f)) then                                      ! for same atom, same shell, same point -> DO NOT EVALUTE 1/r !!
-!!!        else
-!!!          ave_dist2_up = ave_dist2_up + &
-!!!                   1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos2_up(a)%point_x_y_z(e,f,:))**2))
-!!!        end if
-!!!      end do
-!!!    end do
-!!!! keep configuration?
-!!!    if (ave_dist2_up < ave_dist1_up) then
-!!!      pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
-!!!      pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
-!!!      ave_dist1_up = ave_dist2_up
-!!!    end if
-!!!! OPTIMIZE DN CHANNEL !
-!!!    b = pos1_dn(a)%n_shells                                                    ! outermost shell -> valence only
-!!!    do c = 1, pos1_dn(a)%n_points(b)
-!!!      call mc_step(pos1_dn(a)%r_theta_phi(b,c,1:3), &
-!!!                   pos1_dn(a)%center_x_y_z(1:3),    &                          ! single MC step to change the pos
-!!!                   pos2_dn(a)%r_theta_phi(b,c,1:3), &
-!!!                   pos2_dn(a)%point_x_y_z(b,c,1:3), step_size)
-!!!    end do
-!!!! 1/r calculation
-!!!    ave_dist2_dn = 0.0
-!!!    b = pos2_dn(a)%n_shells
-!!!    do c = 1, pos2_dn(a)%n_points(b)
-!!!      e = pos2_dn(a)%n_shells
-!!!      do f = 1, pos2_dn(a)%n_points(e)
-!!!        if ((b == e) .and. (c == f)) then                                      ! for same atom, same shell, same point -> DO NOT EVALUTE 1/r !!
-!!!        else
-!!!          ave_dist2_dn = ave_dist2_dn + &
-!!!                   1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(e,f,:))**2))
-!!!        end if
-!!!      end do
-!!!    end do
-!!!! keep configuration?
-!!!    if (ave_dist2_dn < ave_dist1_dn) then
-!!!      pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-!!!      pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-!!!      ave_dist1_dn = ave_dist2_dn
-!!!    end if
-!!!  end do                                                                       ! end MC cycles for valence optimization
-!!!
-!!!! Some output regarding the optimizations
-!!!  write(6,*) ' '
-!!!  write(6,*) '### Final 1/r ###'
-!!!  write(6,*) 'up_core        ', ave_dist1_up_core 
-!!!  write(6,*) 'dn_core        ', ave_dist1_dn_core
-!!!  write(6,*) 'up_val         ', ave_dist1_up
-!!!  write(6,*) 'dn_val         ', ave_dist1_dn
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! ROTATIONS                                          !
-! Rotate valence-up against core-up -> minimize 1/r  !
-! Rotate valence-dn against core-dn -> minimize 1/r  !
-! Rotate dn against up              -> minimize 1/r  !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ave_dist1_up = 100000000.0
-  ave_dist1_dn = 100000000.0
-  do t = 1, cycles
-! VALENCE-UP AGAINST CORE-UP !
-    call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
-    b = pos1_up(a)%n_shells                                                    ! rotate valence points
-    do c = 1, pos1_up(a)%n_points(b)
-      call rotate_pos(full_rot, pos1_up(a)%point_x_y_z(b,c,1:3), &
-                      pos1_up(a)%center_x_y_z(1:3), pos2_up(a)%point_x_y_z(b,c,1:3))
-    end do
-! 1/r calculation
-    ave_dist2_up = 0.0                                                         ! 1/r between valence-up and core-up
-    b = pos2_up(a)%n_shells                                                    ! Valence
-    do c = 1, pos2_up(a)%n_points(b)
-      do e = 1, pos1_up(a)%n_shells-1                                          ! core. Unchanged. Use index 1
-        do f = 1, pos1_up(a)%n_points(e)
-          ave_dist2_up  = ave_dist2_up + &
-                 1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
+    !
+    ! Optimize core structure globally (via rotations) with respect to any smaller shell
+    !
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! ROTATIONS                                              !
+    ! Rotate current core against any lower core. DN Channel !
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if ((b > 1) .and. (b <= pos1_dn(a)%n_shells)) then                             ! any shell except the 1s. 
+      ave_dist1_dn = 100000000.0
+      do t = 1, cycles
+        call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
+        do c = 1, pos1_dn(a)%n_points(b)
+          call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(b,c,1:3), &
+                          pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(b,c,1:3))
         end do
-      end do
-    end do
-
-! HERE: NEW use Metropolis algorithm. Allow f_r to go uphill for the rotations!
-! How: ... Introduce random number rand_metro [0,1]
-!          if (ave_dist2_up < ave_dist1_up) -> take new config
-!          if (ave_dist2_up > ave_dist1_up) -> if (ave_dist2_up-ave_dist1_up) < rand_metro*0.01 => still take new config. Else: Take old config.
-!          ==>> If new 1/r is only slighlty larger AND rand_metro*0.01 is small enough
-    if (ave_dist2_up < ave_dist1_up) then
-      pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
-      pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
-      ave_dist1_up = ave_dist2_up
-    else
-      call random_number(rand_metro)
-      if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size) then
-        pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
-        pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
-        ave_dist1_up = ave_dist2_up
-      end if
-    end if
-
-!!!! keep configuration?
-!!!    if (ave_dist2_up < ave_dist1_up) then
-!!!      pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
-!!!      pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
-!!!      ave_dist1_up = ave_dist2_up
-!!!    end if
-
-! VALENCE-DN AGAINST CORE-DN !
-    call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
-    b = pos1_dn(a)%n_shells                                                    ! rotate valence points
-    do c = 1, pos1_dn(a)%n_points(b)
-      call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(b,c,1:3), &
-                      pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(b,c,1:3))
-    end do
-! 1/r calculation
-    ave_dist2_dn = 0.0                                                         ! 1/r between valence-dn and core-dn !!!
-    b = pos2_dn(a)%n_shells                                                    ! Valence
-    do c = 1, pos2_dn(a)%n_points(b)
-      do e = 1, pos1_dn(a)%n_shells-1                                          ! core. Unchanged. Use index 1
-        do f = 1, pos1_dn(a)%n_points(e)
-          ave_dist2_dn  = ave_dist2_dn + &
-                 1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(a)%point_x_y_z(e,f,:))**2))
-        end do
-      end do
-    end do
-! HERE: NEW use Metropolis algorithm. Allow f_r to go uphill for the rotations!
-! How: ... Introduce random number rand_metro [0,1]
-!          if (ave_dist2_dn < ave_dist1_dn) -> take new config
-!          if (ave_dist2_dn > ave_dist1_dn) -> if (ave_dist2_dn-ave_dist1_dn) < rand_metro*0.01 => still take new config. Else: Take old config.
-!          ==>> If new 1/r is only slighlty larger AND rand_metro*0.01 is small enough
-    if (ave_dist2_dn < ave_dist1_dn) then
-      pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-      pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-      ave_dist1_dn = ave_dist2_dn
-    else
-      call random_number(rand_metro)
-      if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size) then
-        pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-        pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-        ave_dist1_dn = ave_dist2_dn
-      end if
-    end if
-!!!! keep configuration?
-!!!    if (ave_dist2_dn < ave_dist1_dn) then
-!!!      pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-!!!      pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-!!!      ave_dist1_dn = ave_dist2_dn
-!!!    end if
-  end do                                                                       ! end MC cycles for the individual spin channels
-
-! DN AGAINST UP. GLOBALLY !
-  ave_dist1 = 100000000.0
-  do t = 1, cycles
-    call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
-    do b = 1, pos1_dn(a)%n_shells                                              ! rotate all dn points
-      do c = 1, pos1_dn(a)%n_points(b)
-        call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(b,c,1:3), &
-                        pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(b,c,1:3))
-      end do
-    end do
-! 1/r calculation
-    ave_dist2 = 0.0                                                            ! 1/r between dn and up !!!
-    do b = 1, pos1_up(a)%n_shells
-      do c = 1, pos1_up(a)%n_points(b)
-        do e = 1, pos2_dn(a)%n_shells
-          do f = 1, pos2_dn(a)%n_points(e)
-            if (pos1_up(a)%elements(3:5) == 'ECP' .or. pos1_up(a)%elements(4:6) == 'ECP') then   ! if ECP are used -> there is no core. Just evaluate the 1/r
-              ave_dist2 = ave_dist2 + &
-                    1.0/sqrt(sum((pos1_up(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(e,f,:))**2))
-            else
-              ! For points on a sphere -> evaluate 1s contributions
-              if (pos1_up(a)%elements == 'POS') then
-                ave_dist2  = ave_dist2 + &
-                  1.0/sqrt(sum((pos1_up(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(e,f,:))**2))
-              end if
-              if ((b == 1) .and. (e == 1)) then                                ! avoid evaluating 1s UP and 1s DN (largest contribution) -> makes optimization extremely inefficient !!
-              else
-                ave_dist2  = ave_dist2 + &
-                       1.0/sqrt(sum((pos1_up(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(e,f,:))**2))
-              end if
-            end if
+        !
+        ! 1/r calculation
+        !
+        ave_dist2_dn = 0.0                                                         ! 1/r DN
+        do c = 1, pos2_dn(a)%n_points(b)
+          do d = 1, b-1                                                            ! Use any smaller shell structure and optimize the higher shell according to the lower core structure
+            do f = 1, pos1_dn(a)%n_points(d)                                       ! Unchanged index, thus index 1
+              ave_dist2_dn  = ave_dist2_dn + &
+                     1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(a)%point_x_y_z(d,f,:))**2))
+            end do
           end do
         end do
-      end do
-    end do
-! HERE: NEW use Metropolis algorithm. Allow f_r to go uphill for the rotations!
-! How: ... Introduce random number rand_metro [0,1]
-!          if (ave_dist2 < ave_dist1) -> take new config
-!          if (ave_dist2 > ave_dist1) -> if (ave_dist2-ave_dist1) < rand_metro*0.01 => still take new config. Else: Take old config.
-!          ==>> If new 1/r is only slighlty larger AND rand_metro*0.01 is small enough
-    if (ave_dist2 < ave_dist1) then
-      pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-      pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-      ave_dist1 = ave_dist2
-    else
-      call random_number(rand_metro)
-      if ((ave_dist2-ave_dist1) < rand_metro*step_size) then
-        pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-        pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-        ave_dist1 = ave_dist2
-      end if
-    end if
-!!!! KEEP CONFIG?
-!!!    if (ave_dist2 < ave_dist1) then
-!!!      pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-!!!      pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-!!!      ave_dist1 = ave_dist2
-!!!    end if
-  end do                                                                       ! end MC cycles for the rotation between the spin channels
+        !
+        ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
+        ! How: ... Introduce random number rand_metro [0,1]
+        !          if (ave_dist2_dn < ave_dist1_dn) -> take new config
+        !          if (ave_dist2_dn > ave_dist1_dn) -> if (ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size => still take new config. Else: Take old config.
+        !          ==>> If new 1/r is only slighlty larger AND rand_metro*step_size is small enough
+        if (ave_dist2_dn < ave_dist1_dn) then
+          pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
+          pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
+          ave_dist1_dn = ave_dist2_dn
+        else
+          call random_number(rand_metro)
+          if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size) then
+            pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
+            pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
+            ave_dist1_dn = ave_dist2_dn
+          end if
+        end if
+      end do  ! end MC cycles
+      !
+      ! After optimizing the core structure of the DN channel -> optimize it via rotations with respect to the UP channel (only lower core structure as well, and same level in addition)
+      ! Rotate all core structure below the current one AND the current one as well
+      ave_dist1 = 100000000.0
+      do t = 1, cycles
+        call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
+        do d = 1, b                                                                ! rotate all dn points up to the current core level (keep symmetry between the lower core structures the same)
+          do c = 1, pos1_dn(a)%n_points(d)
+            call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(d,c,1:3), &
+                            pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(d,c,1:3))
+          end do
+        end do
+    ! 1/r calculation
+        ave_dist2 = 0.0                                                            ! 1/r between dn and up !!!
+        do d = 1, b
+          do c = 1, pos2_dn(a)%n_points(d)
+            do e = 1, min(b,pos1_up(a)%n_shells)                                   ! This loop for the UP channel goes only to the current core level. If the current core level doesn't exist -> use the maximum available
+              do f = 1, pos1_up(a)%n_points(e)
+                if (pos2_dn(a)%elements(3:5) == 'ECP' .or. pos2_dn(a)%elements(4:6) == 'ECP') then   ! if ECP are used -> there is no core. Just evaluate the 1/r
+                  ave_dist2 = ave_dist2 + &
+                        1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(d,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
+                else
+                  if ((d == 1) .and. (e == 1)) then                                ! avoid evaluating 1s UP and 1s DN (largest contribution) -> makes optimization extremely inefficient !!
+                  else
+                    ave_dist2  = ave_dist2 + &
+                           1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(d,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
+                  end if
+                end if
+              end do
+            end do
+          end do
+        end do
+    ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
+    ! How: ... Introduce random number rand_metro [0,1]
+    !          if (ave_dist2 < ave_dist1) -> take new config
+    !          if (ave_dist2 > ave_dist1) -> if (ave_dist2-ave_dist1) < rand_metro*step_size => still take new config. Else: Take old config.
+    !          ==>> If new 1/r is only slighlty larger AND rand_metro*step_size is small enough
+        if (ave_dist2 < ave_dist1) then
+          pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
+          pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
+          ave_dist1 = ave_dist2
+        else
+          call random_number(rand_metro)
+          if ((ave_dist2-ave_dist1) < rand_metro*step_size) then
+            pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
+            pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
+            ave_dist1 = ave_dist2
+          end if
+        end if
+      end do  ! end MC cycles
+    end if    ! end if - shells
+  end do      ! end UP channel
+! END NEW
+
+! INCLUDE POS AT SOME POINT. CURRENTLY MISSING
+
 
   call cpu_time(finish_t)
   write(6,*) 'up-dn global   ', ave_dist1
@@ -2308,226 +2156,268 @@ else                                                                           !
     !
     ! Get UP CHANNEL  
     !
-    do b = 1, pos1_up(a)%n_shells-1                                              ! Only core
+    do b = 1, pos1_up(a)%n_shells-1                                            ! Only core
       do c = 1, pos1_up(a)%n_points(b)
         call struct_motif(pos1_up(a)%n_points(b),c,pos1_up(a)%r_theta_phi(b,c,1),&
                           pos1_up(a)%center_x_y_z(1:3),pos1_up(a)%point_x_y_z(b,c,1:3))
         pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
       end do
-    end do
+      !
+      ! Optimize core structure globally (via rotations) with respect to any smaller shell
+      !
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      ! ROTATIONS                                              !
+      ! Rotate current core against any lower core. UP Channel !
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      if ((b > 1) .and. (b <= pos1_up(a)%n_shells-1)) then                           ! any shell except the 1s. 
+        ave_dist1_up = 100000000.0
+        do t = 1, cycles
+          call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
+          do c = 1, pos1_up(a)%n_points(b)
+            call rotate_pos(full_rot, pos1_up(a)%point_x_y_z(b,c,1:3), &
+                            pos1_up(a)%center_x_y_z(1:3), pos2_up(a)%point_x_y_z(b,c,1:3))
+          end do
+          !
+          ! 1/r calculation
+          !
+          ave_dist2_up = 0.0                                                         ! 1/r UP
+          do c = 1, pos2_up(a)%n_points(b)
+            do d = 1, b-1                                                            ! Use any smaller shell structure and optimize the higher shell according to the lower core structure
+              do f = 1, pos1_up(a)%n_points(d)                                       ! Unchanged index, thus index 1
+                ave_dist2_up  = ave_dist2_up + &
+                       1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(d,f,:))**2))
+              end do
+            end do
+          end do
+          !
+          ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
+          ! How: ... Introduce random number rand_metro [0,1]
+          !          if (ave_dist2_up < ave_dist1_up) -> take new config
+          !          if (ave_dist2_up > ave_dist1_up) -> if (ave_dist2_up-ave_dist1_up) < rand_metro*step_size => still take new config. Else: Take old config.
+          !          ==>> If new 1/r is only slighlty larger AND rand_metro*step_size is small enough
+          if (ave_dist2_up < ave_dist1_up) then
+            pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
+            pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
+            ave_dist1_up = ave_dist2_up
+          else
+            call random_number(rand_metro)
+            if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size) then
+              pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
+              pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
+              ave_dist1_up = ave_dist2_up
+            end if
+          end if
+        end do  ! end MC cycles
+      end if    ! end if - shells
+    end do      ! end UP channel
+
+    ! 
+    ! Further, rotate all cores with respect to the valence pattern!
     !
-    ! Get DN CHANNEL  
-    !
-    do b = 1, pos1_dn(a)%n_shells-1                                             ! Only core
-      do c = 1, pos1_dn(a)%n_points(b)
-        call struct_motif(pos1_dn(a)%n_points(b),c,pos1_dn(a)%r_theta_phi(b,c,1),&
-                          pos1_dn(a)%center_x_y_z(1:3),pos1_dn(a)%point_x_y_z(b,c,1:3))
-        pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
-      end do
-    end do
-
-  end do
-! END NEW 
-
-!!!    ave_dist1_up_core = 10000000.0
-!!!    ave_dist1_dn_core = 10000000.0
-!!!!
-!!!! CORE OPTIMIZATION
-!!!!
-!!!    do t = 1, cycles
-!!!      !
-!!!      ! UP-CHANNEL
-!!!      !
-!!!      do b = 1, pos1_up(a)%n_shells-1                                          ! not in the outermost shell -> core
-!!!        do c = 1, pos1_up(a)%n_points(b)
-!!!          call mc_step(pos1_up(a)%r_theta_phi(b,c,1:3), &
-!!!                       pos1_up(a)%center_x_y_z(1:3),    &                      ! single MC step to change the positions
-!!!                       pos2_up(a)%r_theta_phi(b,c,1:3), &
-!!!                       pos2_up(a)%point_x_y_z(b,c,1:3), step_size)
-!!!        end do
-!!!      end do
-!!!      !
-!!!      ! 1/r calculation
-!!!      !
-!!!      ave_dist2_up_core = 0.0
-!!!      do b = 1, pos2_up(a)%n_shells-1
-!!!        do c = 1, pos2_up(a)%n_points(b)
-!!!          do e = 1, pos2_up(a)%n_shells-1
-!!!            do f = 1, pos2_up(a)%n_points(e)
-!!!              if ((b == e) .and. (c ==f)) then                                 ! do not evaluate 1/r for one and the same point
-!!!              else
-!!!                ave_dist2_up_core = ave_dist2_up_core + &
-!!!                           1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos2_up(a)%point_x_y_z(e,f,:))**2))
-!!!              end if
-!!!            end do
-!!!          end do
-!!!        end do
-!!!      end do
-!!!      !
-!!!      ! Keep configuration?
-!!!      !
-!!!      if (ave_dist2_up_core < ave_dist1_up_core) then
-!!!        pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
-!!!        pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
-!!!        ave_dist1_up_core = ave_dist2_up_core
-!!!      end if
-!!!      !
-!!!      ! DN-CHANNEL
-!!!      !
-!!!      do b = 1, pos1_dn(a)%n_shells-1                                          ! not outermost shell yet -> core
-!!!        do c = 1, pos1_dn(a)%n_points(b)
-!!!          call mc_step(pos1_dn(a)%r_theta_phi(b,c,1:3), &
-!!!                       pos1_dn(a)%center_x_y_z(1:3),    &                      ! single MC step to change the pos
-!!!                       pos2_dn(a)%r_theta_phi(b,c,1:3), &
-!!!                       pos2_dn(a)%point_x_y_z(b,c,1:3), step_size)
-!!!        end do
-!!!      end do
-!!!      !
-!!!      ! 1/r calculation
-!!!      !
-!!!      ave_dist2_dn_core = 0.0
-!!!      do b = 1, pos2_dn(a)%n_shells-1
-!!!        do c = 1, pos2_dn(a)%n_points(b)
-!!!          do e = 1, pos2_dn(a)%n_shells-1
-!!!            do f = 1, pos2_dn(a)%n_points(e)
-!!!              if ((b == e) .and. (c == f)) then                                ! do not evaluate 1/r for one and the same point
-!!!              else
-!!!                ave_dist2_dn_core = ave_dist2_dn_core + &
-!!!                         1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(e,f,:))**2))
-!!!              end if
-!!!            end do
-!!!          end do
-!!!        end do
-!!!      end do
-!!!      !
-!!!      ! Keep configuration?
-!!!      !
-!!!      if (ave_dist2_dn_core < ave_dist1_dn_core) then
-!!!        pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-!!!        pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-!!!        ave_dist1_dn_core = ave_dist2_dn_core
-!!!      end if
-!!!    end do                                                                     ! end MC cycles for core optimization
-!!!  end do                                                                       ! end atoms
-
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Add rotation of optimized core to minimize/maximize 1/r of core to valence !
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  do a = 1, size(pos1_up)                                                      ! for each atom!
-    ave_dist1_up_core = 1000000.0                                              ! 0.0 if maximize 1/r, 100000.0 minimize 1/r
-    ave_dist1_dn_core = 1000000.0                                              ! if changing these value, be sure to change the > or < signs in the distance evaluation !!!
+    ave_dist1_up = 100000000.0
     do t = 1, cycles
-      !
-      ! UP-CHANNEL
-      !
-      call create_rotMat(full_rot, step_size)                                  ! one rotation matrix for all points
-      do b = 1, pos1_up(a)%n_shells-1                                          ! not in the outermost shell -> core
+      call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
+      do b = 1, pos1_up(a)%n_shells-1 
         do c = 1, pos1_up(a)%n_points(b)
-          call rotate_pos(full_rot, pos1_up(a)%point_x_y_z(b,c,1:3), &         ! rotate all core points for that atom
+          call rotate_pos(full_rot, pos1_up(a)%point_x_y_z(b,c,1:3), &
                           pos1_up(a)%center_x_y_z(1:3), pos2_up(a)%point_x_y_z(b,c,1:3))
         end do
       end do
       !
       ! 1/r calculation
       !
-      ave_dist2_up_core = 0.0
+      ave_dist2_up = 0.0                                                         ! 1/r UP
       do b = 1, pos2_up(a)%n_shells-1
         do c = 1, pos2_up(a)%n_points(b)
-          do d = 1, size(pos1_up)
-            do e = 1, pos2_up(d)%n_shells
-              do f = 1, pos2_up(d)%n_points(e)
-                if ((a == d) .and. (b == e) .and. (c ==f)) then                ! do not evaluate 1/r for one and the same point
-                else
-                  ave_dist2_up_core = ave_dist2_up_core + & 
-                             1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos2_up(d)%point_x_y_z(e,f,:))**2))
-                end if
-              end do
+          do g = 1, size(pos1_up)                                                ! for all atoms 
+            d = pos1_up(a)%n_shells                                                ! Outermost fods
+            do f = 1, pos1_up(g)%n_points(d)                                       ! 
+              ave_dist2_up  = ave_dist2_up + &
+                     1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(g)%point_x_y_z(d,f,:))**2))
             end do
           end do
         end do
       end do
-! HERE: NEW use Metropolis algorithm. Allow f_r to go uphill for the rotations!
-! How: ... Introduce random number rand_metro [0,1]
-!          if (ave_dist2_up < ave_dist1_up) -> take new config
-!          if (ave_dist2_up > ave_dist1_up) -> if (ave_dist2_up-ave_dist1_up) < rand_metro*0.01 => still take new config. Else: Take old config.
-!          ==>> If new 1/r is only slighlty larger AND rand_metro*0.01 is small enough
-      if (ave_dist2_up_core < ave_dist1_up_core) then
+      !
+      ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
+      ! How: ... Introduce random number rand_metro [0,1]
+      !          if (ave_dist2_up < ave_dist1_up) -> take new config
+      !          if (ave_dist2_up > ave_dist1_up) -> if (ave_dist2_up-ave_dist1_up) < rand_metro*step_size => still take new config. Else: Take old config.
+      !          ==>> If new 1/r is only slighlty larger AND rand_metro*step_size is small enough
+      if (ave_dist2_up < ave_dist1_up) then
         pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
         pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
-        ave_dist1_up_core = ave_dist2_up_core
+        ave_dist1_up = ave_dist2_up
       else
         call random_number(rand_metro)
-        if ((ave_dist2_up_core-ave_dist1_up_core) < rand_metro*step_size) then
+        if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size) then
           pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
           pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
-          ave_dist1_up_core = ave_dist2_up_core
+          ave_dist1_up = ave_dist2_up
         end if
       end if
-!!!      !
-!!!      ! Keep configuration?
-!!!      !
-!!!      if (ave_dist2_up_core < ave_dist1_up_core) then                          ! < if minimizing 1/r, > if maximizing 1/r
-!!!        pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
-!!!        pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
-!!!        ave_dist1_up_core = ave_dist2_up_core
-!!!      end if
+    end do    ! end MC cycle. final end UP channels
+    !
+    ! Get DN CHANNEL  
+    !
+    do b = 1, pos1_dn(a)%n_shells-1                                            ! Only core
+      do c = 1, pos1_dn(a)%n_points(b)
+        call struct_motif(pos1_dn(a)%n_points(b),c,pos1_dn(a)%r_theta_phi(b,c,1),&
+                          pos1_dn(a)%center_x_y_z(1:3),pos1_dn(a)%point_x_y_z(b,c,1:3))
+        pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
+      end do
       !
-      ! DN-CHANNEL
+      ! Optimize core structure globally (via rotations) with respect to any smaller shell
       !
-      call create_rotMat(full_rot, step_size)                                  ! one rotation matrix for all points
-      do b = 1, pos1_dn(a)%n_shells-1                                          ! not in the outermost shell -> core
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      ! ROTATIONS                                              !
+      ! Rotate current core against any lower core. DN Channel !
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      if ((b > 1) .and. (b <= pos1_dn(a)%n_shells-1)) then                           ! any shell except the 1s. 
+        ave_dist1_dn = 100000000.0
+        do t = 1, cycles
+          call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
+          do c = 1, pos1_dn(a)%n_points(b)
+            call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(b,c,1:3), &
+                            pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(b,c,1:3))
+          end do
+          !
+          ! 1/r calculation
+          !
+          ave_dist2_dn = 0.0                                                         ! 1/r DN
+          do c = 1, pos2_dn(a)%n_points(b)
+            do d = 1, b-1                                                            ! Use any smaller shell structure and optimize the higher shell according to the lower core structure
+              do f = 1, pos1_dn(a)%n_points(d)                                       ! Unchanged index, thus index 1
+                ave_dist2_dn  = ave_dist2_dn + &
+                       1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(a)%point_x_y_z(d,f,:))**2))
+              end do
+            end do
+          end do
+          !
+          ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
+          ! How: ... Introduce random number rand_metro [0,1]
+          !          if (ave_dist2_dn < ave_dist1_dn) -> take new config
+          !          if (ave_dist2_dn > ave_dist1_dn) -> if (ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size => still take new config. Else: Take old config.
+          !          ==>> If new 1/r is only slighlty larger AND rand_metro*step_size is small enough
+          if (ave_dist2_dn < ave_dist1_dn) then
+            pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
+            pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
+            ave_dist1_dn = ave_dist2_dn
+          else
+            call random_number(rand_metro)
+            if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size) then
+              pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
+              pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
+              ave_dist1_dn = ave_dist2_dn
+            end if
+          end if
+        end do  ! end MC cycles
+      end if
+    end do
+    ! 
+    ! Further, rotate all cores with respect to the valence pattern!
+    !
+    ave_dist1_dn = 100000000.0
+    do t = 1, cycles
+      call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
+      do b = 1, pos1_dn(a)%n_shells-1
         do c = 1, pos1_dn(a)%n_points(b)
-          call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(b,c,1:3), &         ! rotate all core points for that atom
-                                pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(b,c,1:3))
+          call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(b,c,1:3), &
+                          pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(b,c,1:3))
         end do
       end do
       !
       ! 1/r calculation
       !
-      ave_dist2_dn_core = 0.0
+      ave_dist2_dn = 0.0                                                         ! 1/r UP
       do b = 1, pos2_dn(a)%n_shells-1
         do c = 1, pos2_dn(a)%n_points(b)
-          do d = 1, size(pos1_dn)
-            do e = 1, pos2_dn(d)%n_shells
-              do f = 1, pos2_dn(d)%n_points(e)
-                if ((a == d) .and. (b == e) .and. (c == f)) then               ! do not evaluate 1/r for one and the same point
-                else
-                   ave_dist2_dn_core = ave_dist2_dn_core + &
-                           1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos2_dn(d)%point_x_y_z(e,f,:))**2))
-                end if
-              end do
+          do g = 1, size(pos1_dn)                                                ! for all atoms 
+            d = pos1_dn(a)%n_shells                                                ! Outermost fods
+            do f = 1, pos1_dn(g)%n_points(d)                                       ! 
+              ave_dist2_dn  = ave_dist2_dn + &
+                      1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(g)%point_x_y_z(d,f,:))**2))
             end do
           end do
         end do
       end do
-! HERE: NEW use Metropolis algorithm. Allow f_r to go uphill for the rotations!
-! How: ... Introduce random number rand_metro [0,1]
-!          if (ave_dist2_up < ave_dist1_up) -> take new config
-!          if (ave_dist2_up > ave_dist1_up) -> if (ave_dist2_up-ave_dist1_up) < rand_metro*0.01 => still take new config. Else: Take old config.
-!          ==>> If new 1/r is only slighlty larger AND rand_metro*0.01 is small enough
-      if (ave_dist2_dn_core < ave_dist1_dn_core) then
+      !
+      ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
+      ! How: ... Introduce random number rand_metro [0,1]
+      !          if (ave_dist2_up < ave_dist1_up) -> take new config
+      !          if (ave_dist2_up > ave_dist1_up) -> if (ave_dist2_up-ave_dist1_up) < rand_metro*step_size => still take new config. Else: Take old config.
+      !          ==>> If new 1/r is only slighlty larger AND rand_metro*step_size is small enough
+      if (ave_dist2_dn < ave_dist1_dn) then
         pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
         pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-        ave_dist1_dn_core = ave_dist2_dn_core
+        ave_dist1_dn = ave_dist2_dn
       else
         call random_number(rand_metro)
-        if ((ave_dist2_dn_core-ave_dist1_dn_core) < rand_metro*step_size) then
+        if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size) then
           pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
           pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-          ave_dist1_dn_core = ave_dist2_dn_core
+          ave_dist1_dn = ave_dist2_dn
         end if
       end if
-!!!      !
-!!!      ! Keep configuration?
-!!!      !
-!!!      if (ave_dist2_dn_core < ave_dist1_dn_core) then                          ! < if minimizing 1/r, > if maximizing 1/r
-!!!        pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-!!!        pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-!!!        ave_dist1_dn_core = ave_dist2_dn_core
-!!!      end if
-    end do                                                                     ! end MC cycles for core optimization
-  end do                                                                       ! end atoms
+    end do    ! end MC cycle. final end UP channels
+  end do
+! END NEW
+
+! For molecules -> not rotation of DN vs UP in the end. Shouldn't be necessary
+
+
+
+
+!!!!
+!!!!
+!!!!
+!!!!
+!!!!
+!!!!
+!!!!      !
+!!!!      ave_dist2_dn_core = 0.0
+!!!!      do b = 1, pos2_dn(a)%n_shells-1
+!!!!        do c = 1, pos2_dn(a)%n_points(b)
+!!!!          do d = 1, size(pos1_dn)
+!!!!            do e = 1, pos2_dn(d)%n_shells
+!!!!              do f = 1, pos2_dn(d)%n_points(e)
+!!!!                if ((a == d) .and. (b == e) .and. (c == f)) then               ! do not evaluate 1/r for one and the same point
+!!!!                else
+!!!!                   ave_dist2_dn_core = ave_dist2_dn_core + &
+!!!!                           1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos2_dn(d)%point_x_y_z(e,f,:))**2))
+!!!!                end if
+!!!!              end do
+!!!!            end do
+!!!!          end do
+!!!!        end do
+!!!!      end do
+!!!!! HERE: NEW use Metropolis algorithm. Allow f_r to go uphill for the rotations!
+!!!!! How: ... Introduce random number rand_metro [0,1]
+!!!!!          if (ave_dist2_up < ave_dist1_up) -> take new config
+!!!!!          if (ave_dist2_up > ave_dist1_up) -> if (ave_dist2_up-ave_dist1_up) < rand_metro*0.01 => still take new config. Else: Take old config.
+!!!!!          ==>> If new 1/r is only slighlty larger AND rand_metro*0.01 is small enough
+!!!!      if (ave_dist2_dn_core < ave_dist1_dn_core) then
+!!!!        pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
+!!!!        pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
+!!!!        ave_dist1_dn_core = ave_dist2_dn_core
+!!!!      else
+!!!!        call random_number(rand_metro)
+!!!!        if ((ave_dist2_dn_core-ave_dist1_dn_core) < rand_metro*step_size) then
+!!!!          pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
+!!!!          pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
+!!!!          ave_dist1_dn_core = ave_dist2_dn_core
+!!!!        end if
+!!!!      end if
+!!!!!!!      !
+!!!!!!!      ! Keep configuration?
+!!!!!!!      !
+!!!!!!!      if (ave_dist2_dn_core < ave_dist1_dn_core) then                          ! < if minimizing 1/r, > if maximizing 1/r
+!!!!!!!        pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
+!!!!!!!        pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
+!!!!!!!        ave_dist1_dn_core = ave_dist2_dn_core
+!!!!!!!      end if
+!!!!    end do                                                                     ! end MC cycles for core optimization
+!!!!  end do                                                                       ! end atoms
 
 !!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!
