@@ -932,35 +932,36 @@ if (number_of_centers == 1) then
       !
       ! After optimizing the core structure of the DN channel -> optimize it via rotations with respect to the UP channel (only lower core structure as well, and same level in addition)
       ! Rotate all core structure below the current one AND the current one as well
+      ! 
       ave_dist1 = 100000000.0
       do t = 1, cycles
         call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
-        do d = 1, b                                                                ! rotate all dn points up to the current core level (keep symmetry between the lower core structures the same)
-          do c = 1, pos1_dn(a)%n_points(d)
-            call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(d,c,1:3), &
-                            pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(d,c,1:3))
-          end do
+!        do d = 1, b                                                                ! rotate all dn points up to the current core level (keep symmetry between the lower core structures the same)
+        do c = 1, pos1_dn(a)%n_points(b)
+          call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(b,c,1:3), &
+                          pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(b,c,1:3))
         end do
+!        end do
     ! 1/r calculation
         ave_dist2 = 0.0                                                            ! 1/r between dn and up !!!
-        do d = 1, b
-          do c = 1, pos2_dn(a)%n_points(d)
-            do e = 1, min(b,pos1_up(a)%n_shells)                                   ! This loop for the UP channel goes only to the current core level. If the current core level doesn't exist -> use the maximum available
-              do f = 1, pos1_up(a)%n_points(e)
-                if (pos2_dn(a)%elements(3:5) == 'ECP' .or. pos2_dn(a)%elements(4:6) == 'ECP') then   ! if ECP are used -> there is no core. Just evaluate the 1/r
-                  ave_dist2 = ave_dist2 + &
-                        1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(d,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
+!        do d = 1, b
+        do c = 1, pos2_dn(a)%n_points(b)
+          do e = 1, min(b,pos1_up(a)%n_shells)                                   ! This loop for the UP channel goes only to the current core level. If the current core level doesn't exist -> use the maximum available
+            do f = 1, pos1_up(a)%n_points(e)
+              if (pos2_dn(a)%elements(3:5) == 'ECP' .or. pos2_dn(a)%elements(4:6) == 'ECP') then   ! if ECP are used -> there is no core. Just evaluate the 1/r
+                ave_dist2 = ave_dist2 + &
+                      1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
+              else
+                if ((b == 1) .and. (e == 1)) then                                ! avoid evaluating 1s UP and 1s DN (largest contribution) -> makes optimization extremely inefficient !!
                 else
-                  if ((d == 1) .and. (e == 1)) then                                ! avoid evaluating 1s UP and 1s DN (largest contribution) -> makes optimization extremely inefficient !!
-                  else
-                    ave_dist2  = ave_dist2 + &
-                           1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(d,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
-                  end if
+                  ave_dist2  = ave_dist2 + &
+                         1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
                 end if
-              end do
+              end if
             end do
           end do
         end do
+!        end do
     ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
     ! How: ... Introduce random number rand_metro [0,1]
     !          if (ave_dist2 < ave_dist1) -> take new config

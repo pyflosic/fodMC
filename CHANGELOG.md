@@ -63,7 +63,7 @@
 - In xx_databse_xx, modify the number of points to distribute
 
 #### 24-05-2019      KT
-- Introduce structural motifs
+- Introduce structural motifs (new src file, called fodMC_motifs.f90)
 - Use these for atoms and core FODs
 - No distribution of points on a sphere necessary for such FODs
 - Further, a Metropolis-like algorithm is now used for the rotation of core vs. valence FODs
