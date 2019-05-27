@@ -40,7 +40,8 @@ Then, type
         bash run.sh
 
 to run the code for a given input in the file *system*.
-If you want to use 'fodMC_motif', you need to change the executable name in the run.sh file.
+If you want to use 'fodMC_motif' instead of 'fodMC', 
+you need to change the executable name in the run.sh file.
 
 ## Manual/Tutorial
 
