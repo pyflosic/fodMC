@@ -936,15 +936,12 @@ if (number_of_centers == 1) then
       ave_dist1 = 100000000.0
       do t = 1, cycles
         call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
-!        do d = 1, b                                                                ! rotate all dn points up to the current core level (keep symmetry between the lower core structures the same)
-        do c = 1, pos1_dn(a)%n_points(b)
+        do c = 1, pos1_dn(a)%n_points(b)                                           ! rotate all dn points up to the current core level (keep symmetry between the lower core structures the same)
           call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(b,c,1:3), &
                           pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(b,c,1:3))
         end do
-!        end do
     ! 1/r calculation
         ave_dist2 = 0.0                                                            ! 1/r between dn and up !!!
-!        do d = 1, b
         do c = 1, pos2_dn(a)%n_points(b)
           do e = 1, min(b,pos1_up(a)%n_shells)                                   ! This loop for the UP channel goes only to the current core level. If the current core level doesn't exist -> use the maximum available
             do f = 1, pos1_up(a)%n_points(e)
@@ -961,7 +958,6 @@ if (number_of_centers == 1) then
             end do
           end do
         end do
-!        end do
     ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
     ! How: ... Introduce random number rand_metro [0,1]
     !          if (ave_dist2 < ave_dist1) -> take new config
@@ -1436,11 +1432,33 @@ else                                                                           !
                       end if
                       ave_dist2 = ave_dist2 + 1.0/tmp_dist
                     end do
-! TBD
-! use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
-! same for DN channel
-
                   end if
+                  !
+                  ! In addition, use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
+                  !
+                  do j = 1,size(pos1_up)
+                    if ((con_mat(g,j)) /= 0 .or. (con_mat(j,g) /= 0)) then
+                      do e = 1, con_mat(a,b)
+                        tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
+                                                              & pos1_up(j)%center_x_y_z(:))**2))
+                        if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
+                          do f = 1, 3
+                            do h = 1, 3
+                              do i = 1, 3
+                                if (sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - pos1_up(j)%center_x_y_z(:) + &
+                                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
+                                  tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a)-e,:)-pos1_up(j)%center_x_y_z(:)+&
+                                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
+                                end if
+                              end do
+                            end do
+                          end do
+                        end if
+                        ave_dist2 = ave_dist2 + 1.0/tmp_dist
+                      end do
+                    end if
+                  end do
+                  ! END NEW
                 end do
                 ! 
                 ! Keep configuration?
@@ -1563,6 +1581,33 @@ else                                                                           !
                         ave_dist2 = ave_dist2 + 1.0/tmp_dist  
                       end do
                     end if
+                    !
+                    ! In addition, use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
+                    !
+                    do j = 1,size(pos1_dn)
+                      if ((con_mat(g,j)) /= 0 .or. (con_mat(j,g) /= 0)) then
+
+                        do e = 1, con_mat(a,b)
+                          tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
+                                                                & pos1_dn(j)%center_x_y_z(:))**2))
+                          if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
+                            do f = 1, 3
+                              do h = 1, 3
+                                do i = 1, 3
+                                  if (sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - pos1_dn(j)%center_x_y_z(:) + &
+                                               (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
+                                    tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-e,:)-pos1_dn(j)%center_x_y_z(:)+&
+                                               (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
+                                  end if
+                                end do
+                              end do
+                            end do
+                          end if
+                          ave_dist2 = ave_dist2 + 1.0/tmp_dist
+                        end do
+                      end if
+                    end do
+                    ! END NEW
                   end do
                   !
                   ! Keep configuration? 

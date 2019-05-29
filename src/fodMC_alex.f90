@@ -1499,11 +1499,33 @@ else                                                                           !
                       end if
                       ave_dist2 = ave_dist2 + 1.0/tmp_dist
                     end do
-! TBD
-! use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
-! same for DN channel
-
                   end if
+                  !
+                  ! In addition, use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
+                  !
+                  do j = 1,size(pos1_up)
+                    if ((con_mat(g,j)) /= 0 .or. (con_mat(j,g) /= 0)) then
+                      do e = 1, con_mat(a,b)
+                        tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
+                                                              & pos1_up(j)%center_x_y_z(:))**2))
+                        if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
+                          do f = 1, 3
+                            do h = 1, 3
+                              do i = 1, 3
+                                if (sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - pos1_up(j)%center_x_y_z(:) + &
+                                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
+                                  tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:)-pos1_up(j)%center_x_y_z(:)+&
+                                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
+                                end if
+                              end do
+                            end do
+                          end do
+                        end if
+                        ave_dist2 = ave_dist2 + 1.0/tmp_dist
+                      end do
+                    end if
+                  end do
+                  ! END NEW 
                 end do
                 ! 
                 ! Keep configuration?
@@ -1626,6 +1648,33 @@ else                                                                           !
                         ave_dist2 = ave_dist2 + 1.0/tmp_dist  
                       end do
                     end if
+                    !
+                    ! In addition, use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
+                    !
+                    do j = 1,size(pos1_dn)
+                      if ((con_mat(g,j)) /= 0 .or. (con_mat(j,g) /= 0)) then
+
+                        do e = 1, con_mat(a,b)
+                          tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
+                                                                & pos1_dn(j)%center_x_y_z(:))**2))
+                          if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
+                            do f = 1, 3
+                              do h = 1, 3
+                                do i = 1, 3
+                                  if (sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - pos1_dn(j)%center_x_y_z(:) + &
+                                               (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
+                                    tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-e,:)-pos1_dn(j)%center_x_y_z(:)+&
+                                               (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
+                                  end if
+                                end do
+                              end do
+                            end do
+                          end if
+                          ave_dist2 = ave_dist2 + 1.0/tmp_dist
+                        end do
+                      end if
+                    end do
+                    ! END NEW
                   end do
                   !
                   ! Keep configuration? 
