@@ -824,6 +824,13 @@ if (number_of_centers == 1) then
     do c = 1, pos1_up(a)%n_points(b)
       call struct_motif(pos1_up(a)%n_points(b),c,pos1_up(a)%r_theta_phi(b,c,1),&
                         pos1_up(a)%center_x_y_z(1:3),pos1_up(a)%point_x_y_z(b,c,1:3))
+      !
+      ! invert motif if b is an even number
+      !
+      if (mod(b,2) == 0) then
+        pos1_up(a)%point_x_y_z(b,c,1:3) = -1.0*pos1_up(a)%point_x_y_z(b,c,1:3)
+      end if
+
       pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
     end do
     !
@@ -865,7 +872,7 @@ if (number_of_centers == 1) then
           ave_dist1_up = ave_dist2_up
         else
           call random_number(rand_metro)
-          if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size) then
+          if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size*0.01) then              ! HERE: NOT 100% good. Moves stuff away from the minimum (e.g. Mg atom) ....
             pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
             pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
             ave_dist1_up = ave_dist2_up
@@ -881,6 +888,12 @@ if (number_of_centers == 1) then
     do c = 1, pos1_dn(a)%n_points(b)
       call struct_motif(pos1_dn(a)%n_points(b),c,pos1_dn(a)%r_theta_phi(b,c,1),&
                         pos1_dn(a)%center_x_y_z(1:3),pos1_dn(a)%point_x_y_z(b,c,1:3))
+      !
+      ! invert motif if b is an odd number
+      !
+      if (mod(b,2) == 1) then
+        pos1_dn(a)%point_x_y_z(b,c,1:3) = -1.0*pos1_dn(a)%point_x_y_z(b,c,1:3)
+      end if
       pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
     end do
     !
@@ -922,7 +935,7 @@ if (number_of_centers == 1) then
           ave_dist1_dn = ave_dist2_dn
         else
           call random_number(rand_metro)
-          if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size) then
+          if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size*0.01) then
             pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
             pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
             ave_dist1_dn = ave_dist2_dn
@@ -936,25 +949,29 @@ if (number_of_centers == 1) then
       ave_dist1 = 100000000.0
       do t = 1, cycles
         call create_rotMat(full_rot, step_size)                                    ! generates a random rotation matrix
-        do c = 1, pos1_dn(a)%n_points(b)                                           ! rotate all dn points up to the current core level (keep symmetry between the lower core structures the same)
-          call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(b,c,1:3), &
-                          pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(b,c,1:3))
+        do d = 1, b                                                                ! all shell up to the current core level
+          do c = 1, pos1_dn(a)%n_points(d)                                           ! rotate all dn points up to the current core level (keep symmetry between the lower core structures the same)
+            call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(d,c,1:3), &
+                            pos1_dn(a)%center_x_y_z(1:3), pos2_dn(a)%point_x_y_z(d,c,1:3))
+          end do
         end do
     ! 1/r calculation
-        ave_dist2 = 0.0                                                            ! 1/r between dn and up !!!
-        do c = 1, pos2_dn(a)%n_points(b)
-          do e = 1, min(b,pos1_up(a)%n_shells)                                   ! This loop for the UP channel goes only to the current core level. If the current core level doesn't exist -> use the maximum available
-            do f = 1, pos1_up(a)%n_points(e)
-              if (pos2_dn(a)%elements(3:5) == 'ECP' .or. pos2_dn(a)%elements(4:6) == 'ECP') then   ! if ECP are used -> there is no core. Just evaluate the 1/r
-                ave_dist2 = ave_dist2 + &
-                      1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
-              else
-                if ((b == 1) .and. (e == 1)) then                                ! avoid evaluating 1s UP and 1s DN (largest contribution) -> makes optimization extremely inefficient !!
+        ave_dist2 = 0.0                                                           ! 1/r between dn and up !!!
+        do d = 1, b
+          do c = 1, pos2_dn(a)%n_points(d)
+            do e = 1, min(b,pos1_up(a)%n_shells)                                   ! This loop for the UP channel goes only to the current core level. If the current core level doesn't exist -> use the maximum available
+              do f = 1, pos1_up(a)%n_points(e)
+                if (pos2_dn(a)%elements(3:5) == 'ECP' .or. pos2_dn(a)%elements(4:6) == 'ECP') then   ! if ECP are used -> there is no core. Just evaluate the 1/r
+                  ave_dist2 = ave_dist2 + &
+                        1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(d,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
                 else
-                  ave_dist2  = ave_dist2 + &
-                         1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
+                  if ((d == 1) .and. (e == 1)) then                                ! avoid evaluating 1s UP and 1s DN (largest contribution) -> makes optimization extremely inefficient !!
+                  else
+                    ave_dist2  = ave_dist2 + &
+                           1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(d,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
+                  end if
                 end if
-              end if
+              end do
             end do
           end do
         end do
@@ -969,7 +986,7 @@ if (number_of_centers == 1) then
           ave_dist1 = ave_dist2
         else
           call random_number(rand_metro)
-          if ((ave_dist2-ave_dist1) < rand_metro*step_size) then
+          if ((ave_dist2-ave_dist1) < rand_metro*step_size*0.01) then
             pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
             pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
             ave_dist1 = ave_dist2

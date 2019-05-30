@@ -62,7 +62,7 @@
 - Use 'POS' as an element specifier. Use '1' for the number of atoms
 - In xx_databse_xx, modify the number of points to distribute
 
-#### 24-05-2019      KT
+#### 24/05/2019      KT
 - Introduce structural motifs (new src file, called fodMC_motifs.f90)
 - Use these for atoms and core FODs
 - No distribution of points on a sphere necessary for such FODs
