@@ -2264,7 +2264,7 @@ else                                                                           !
             ave_dist1_up = ave_dist2_up
           else
             call random_number(rand_metro)
-            if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size) then
+            if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size*0.01) then
               pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
               pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
               ave_dist1_up = ave_dist2_up
@@ -2313,7 +2313,7 @@ else                                                                           !
         ave_dist1_up = ave_dist2_up
       else
         call random_number(rand_metro)
-        if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size) then
+        if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size*0.01) then
           pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
           pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
           ave_dist1_up = ave_dist2_up
@@ -2368,7 +2368,7 @@ else                                                                           !
             ave_dist1_dn = ave_dist2_dn
           else
             call random_number(rand_metro)
-            if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size) then
+            if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size*0.01) then
               pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
               pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
               ave_dist1_dn = ave_dist2_dn
@@ -2416,7 +2416,7 @@ else                                                                           !
         ave_dist1_dn = ave_dist2_dn
       else
         call random_number(rand_metro)
-        if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size) then
+        if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size*0.01) then
           pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
           pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
           ave_dist1_dn = ave_dist2_dn
