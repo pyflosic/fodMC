@@ -2274,6 +2274,8 @@ else                                                                           !
       end if    ! end if - shells
     end do      ! end UP channel
 
+    write(6,*) 'Done UP opt1, atom ',a
+
     ! 
     ! Further, rotate all cores with respect to the valence pattern!
     !
@@ -2293,7 +2295,7 @@ else                                                                           !
       do b = 1, pos2_up(a)%n_shells-1
         do c = 1, pos2_up(a)%n_points(b)
           do g = 1, size(pos1_up)                                                ! for all atoms 
-            d = pos1_up(a)%n_shells                                                ! Outermost fods
+            d = pos1_up(g)%n_shells                                                ! Outermost fods
             do f = 1, pos1_up(g)%n_points(d)                                       ! 
               ave_dist2_up  = ave_dist2_up + &
                      1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(g)%point_x_y_z(d,f,:))**2))
@@ -2320,6 +2322,9 @@ else                                                                           !
         end if
       end if
     end do    ! end MC cycle. final end UP channels
+
+    write(6,*) 'Done UP opt2, atom ',a
+
     !
     ! Get DN CHANNEL  
     !
@@ -2377,6 +2382,9 @@ else                                                                           !
         end do  ! end MC cycles
       end if
     end do
+
+    write(6,*) 'Done DN opt1, atom ',a
+
     ! 
     ! Further, rotate all cores with respect to the valence pattern!
     !
@@ -2396,7 +2404,7 @@ else                                                                           !
       do b = 1, pos2_dn(a)%n_shells-1
         do c = 1, pos2_dn(a)%n_points(b)
           do g = 1, size(pos1_dn)                                                ! for all atoms 
-            d = pos1_dn(a)%n_shells                                                ! Outermost fods
+            d = pos1_dn(g)%n_shells                                                ! Outermost fods
             do f = 1, pos1_dn(g)%n_points(d)                                       ! 
               ave_dist2_dn  = ave_dist2_dn + &
                       1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(g)%point_x_y_z(d,f,:))**2))
@@ -2422,7 +2430,10 @@ else                                                                           !
           ave_dist1_dn = ave_dist2_dn
         end if
       end if
-    end do    ! end MC cycle. final end UP channels
+    end do    ! end MC cycle. final end DN channel
+
+    write(6,*) 'Done DN opt1, atom ',a
+
   end do
 ! END NEW
 
