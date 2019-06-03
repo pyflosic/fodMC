@@ -2273,9 +2273,6 @@ else                                                                           !
         end do  ! end MC cycles
       end if    ! end if - shells
     end do      ! end UP channel
-
-    write(6,*) 'Done UP opt1, atom ',a
-
     ! 
     ! Further, rotate all cores with respect to the valence pattern!
     !
@@ -2322,8 +2319,6 @@ else                                                                           !
         end if
       end if
     end do    ! end MC cycle. final end UP channels
-
-    write(6,*) 'Done UP opt2, atom ',a
 
     !
     ! Get DN CHANNEL  
@@ -2382,9 +2377,6 @@ else                                                                           !
         end do  ! end MC cycles
       end if
     end do
-
-    write(6,*) 'Done DN opt1, atom ',a
-
     ! 
     ! Further, rotate all cores with respect to the valence pattern!
     !
@@ -2431,9 +2423,6 @@ else                                                                           !
         end if
       end if
     end do    ! end MC cycle. final end DN channel
-
-    write(6,*) 'Done DN opt1, atom ',a
-
   end do
 ! END NEW
 
