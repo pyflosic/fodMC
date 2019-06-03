@@ -29,6 +29,13 @@ There are now two executables. 'fodMC' is the original code, while 'fodMC_motif'
 for the generation of atomic guesses and core FODs. Thus, in this version these FODs are not generated 
 by the distribution of points on a sphere (beta test version).
 
+# ATTENTION
+Initial FODs for transition metals and larger atoms are currently not trustworthy.
+This is due to the fact that the spherical symmetry of the core FODs (with is strictly enforced)
+does not represent a good guess for such systems. Intensive research is needed to determine the 
+correct structural motifs for such systems.
+
+
 ## Running the code 
 
 Go to the folders *examples*. 
