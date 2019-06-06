@@ -30,7 +30,7 @@ for the generation of atomic guesses and core FODs. Thus, in this version these 
 by the distribution of points on a sphere (beta test version).
 
 # ATTENTION
-Initial FODs for transition metals and larger atoms may currently not be raliable.
+Initial FODs for transition metals and larger atoms may currently not be reliable.
 This is due to the fact that the spherical symmetry of the core FODs (with is strictly enforced)
 might not represent a good guess for such systems. Intensive research is needed to determine the 
 correct structural motifs for such systems.
