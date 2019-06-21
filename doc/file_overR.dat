@@ -1,4 +1,5 @@
-Resulting f_r values for the distribution of N = [2,1000] 
+Resulting f_r = sum_{i} sum_{j /= i} 1/r_{ij} 
+values for the distribution of N = [2,1000] 
 points on a single sphere with radius r = 1.
 Values for f_r^N as well as the normalized value f_r^N,norm are given.
 Detail: 10^8 MC steps, step size 0.00001
