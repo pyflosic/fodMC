@@ -1085,9 +1085,9 @@ if (number_of_centers == 1) then
     charge = real(element_number(1) - pseudo_charge(1) - sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
     spin   = real(sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
     open(unit=19,file='CLUSTER',status='unknown',action='write')
-    write(19,*) 'LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)'
-    write(19,*) 'NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)'
-    write(19,*) '1                            (NUMBER OF ATOMS)'
+    write(19,fmt='(A)') 'LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)'
+    write(19,fmt='(A)') 'NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)'
+    write(19,fmt='(A)') '1                            (NUMBER OF ATOMS)'
     if ((pos1_up(1)%elements(3:5) == 'ECP') .or. (pos1_up(1)%elements(4:6) == 'ECP')) then
       write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(1)%center_x_y_z(1:3)/units_factor, element_number(1), & 
                    & '  ECP (R, Z, Pseudopotential)'
@@ -1416,7 +1416,7 @@ else                                                                           !
             if (a < b) then                                                    ! Add UP FOD
               c = pos1_up(a)%n_shells                                          ! valence shell UP
               if (pos1_up(a)%elements(1:1) == 'H') then                        ! for H bonds -> place FOD closer to H (0.85*bond length)
-                pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = pos1_up(b)%center_x_y_z(:) + 0.85*bond_vector(:)
+                pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = pos1_up(b)%center_x_y_z(:) + 0.85*bond_vector(:)   ! HERE: change 0.85 and 0.15 to 0.85D0 and 0.15D0
                 bond_count_up(a) = bond_count_up(a) + 1
               else if (pos1_up(b)%elements(1:1) == 'H') then
                 pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = pos1_up(b)%center_x_y_z(:) + 0.15*bond_vector(:)

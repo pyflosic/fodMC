@@ -1035,9 +1035,9 @@ if (number_of_centers == 1) then
     charge = real(element_number(1) - pseudo_charge(1) - sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
     spin   = real(sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
     open(unit=19,file='CLUSTER',status='unknown',action='write')
-    write(19,*) 'LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)'
-    write(19,*) 'NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)'
-    write(19,*) '1                            (NUMBER OF ATOMS)'
+    write(19,fmt='(A)') 'LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)'
+    write(19,fmt='(A)') 'NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)'
+    write(19,fmt='(A)') '1                            (NUMBER OF ATOMS)'
     if ((pos1_up(1)%elements(3:5) == 'ECP') .or. (pos1_up(1)%elements(4:6) == 'ECP')) then
       write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(1)%center_x_y_z(1:3)/units_factor, element_number(1), & 
                    & '  ECP (R, Z, Pseudopotential)'
@@ -3029,6 +3029,7 @@ real(8)                :: motif_9(9,3)
 real(8)                :: motif_10(10,3)
 real(8)                :: motif_13(13,3)
 real(8)                :: motif_15(15,3)
+real(8)                :: motif_18(18,3)
 
 ! Motif 1 -> single point
 motif_1(1:3)    = (/ real(0.0,8), real(0.0,8), real(+1.0,8) /)
@@ -3038,7 +3039,7 @@ motif_2(2,1:3) = (/ real(0.0,8), real(0.0,8), real(-1.0,8) /)
 ! Motif 3 -> equiliteral triangle
 motif_3(1,1:3) = (/ real(0.0,8), real(0.0,8), real(+1.0,8) /)
 motif_3(2,1:3) = (/ real(sqrt(0.75),8), real(0.0,8), real(-0.5,8) /)
-motif_3(2,1:3) = (/ real(-1.0*sqrt(0.75),8), real(0.0,8), real(-0.5,8) /)
+motif_3(3,1:3) = (/ real(-1.0*sqrt(0.75),8), real(0.0,8), real(-0.5,8) /)
 ! Motif 4 -> tetrahedron
 motif_4(1,1:3) = (/ real(0.0,8), real(0.0,8), real(+1.0,8) /)
 motif_4(2,1:3) = (/ real(sqrt(8.0/9.0),8), real(0.0,8), real(-1.0/3.0,8) /)
@@ -3152,7 +3153,25 @@ motif_15(12,1:3) = (/ real( 0.58354622357858787,8),      real( 0.639898733490677
 motif_15(13,1:3) = (/ real( 0.26282599585490291,8),      real(-0.93945045016497686,8),      real(-0.21989848841533588,8) /)
 motif_15(14,1:3) = (/ real( 0.91373833124116843,8),      real(-0.22565420872107333,8),      real(-0.33787934064686809,8) /)
 motif_15(15,1:3) = (/ real(-0.91374155692039261,8),      real( 0.22565927536461444,8),      real(-0.33786722934984625,8) /)
-
+! Motif 18 (coordinates from optimized points on a sphere) - Symmetrized
+motif_18(1,1:3)  = (/ real( 0.00000000000000000,8),      real( 0.00000000000000000,8),      real( 1.00000000000000000,8) /)
+motif_18(2,1:3)  = (/ real( 0.97909461138088549,8),      real( 0.00000000000000000,8),      real(-0.20340706000146119,8) /)
+motif_18(3,1:3)  = (/ real(-0.97909461138088549,8),      real( 0.00000000000000000,8),      real(-0.20340706000146119,8) /)
+motif_18(4,1:3)  = (/ real( 0.00000000000000000,8),      real(-0.73767726267225664,8),      real( 0.67515220301689050,8) /)
+motif_18(5,1:3)  = (/ real( 0.00000000000000000,8),      real( 0.73767726267225664,8),      real( 0.67515220301689050,8) /)
+motif_18(6,1:3)  = (/ real( 0.69232390573735890,8),      real( 0.69232390573735890,8),      real( 0.20340706000146119,8) /)
+motif_18(7,1:3)  = (/ real(-0.69232390573735890,8),      real(-0.69232390573735890,8),      real( 0.20340706000146119,8) /)
+motif_18(8,1:3)  = (/ real(-0.52161824888978940,8),      real( 0.52161824888978940,8),      real(-0.67515220301689050,8) /)
+motif_18(9,1:3)  = (/ real( 0.52161824888978940,8),      real(-0.52161824888978940,8),      real(-0.67515220301689050,8) /)
+motif_18(10,1:3) = (/ real( 0.00000000000000000,8),      real( 0.00000000000000000,8),      real(-1.00000000000000000,8) /)
+motif_18(11,1:3) = (/ real( 0.00000000000000000,8),      real(-0.97909461138088549,8),      real(-0.20340706000146119,8) /)
+motif_18(12,1:3) = (/ real( 0.00000000000000000,8),      real( 0.97909461138088549,8),      real(-0.20340706000146119,8) /)
+motif_18(13,1:3) = (/ real(-0.73767726267225664,8),      real( 0.00000000000000000,8),      real( 0.67515220301689050,8) /)
+motif_18(14,1:3) = (/ real( 0.73767726267225664,8),      real( 0.00000000000000000,8),      real( 0.67515220301689050,8) /)
+motif_18(15,1:3) = (/ real( 0.69232390573735890,8),      real(-0.69232390573735890,8),      real( 0.20340706000146119,8) /)
+motif_18(16,1:3) = (/ real(-0.69232390573735890,8),      real( 0.69232390573735890,8),      real( 0.20340706000146119,8) /)
+motif_18(17,1:3) = (/ real(-0.52161824888978940,8),      real(-0.52161824888978940,8),      real(-0.67515220301689050,8) /)
+motif_18(18,1:3) = (/ real( 0.52161824888978940,8),      real( 0.52161824888978940,8),      real(-0.67515220301689050,8) /)
 
 ! Single point
 if (n_point_tot == 1) then
@@ -3201,6 +3220,10 @@ end if
 ! Motif 15
 if (n_point_tot == 15) then
   position_point(:) = motif_15(n_point,1:3)*radius + nuc_pos(1:3)
+end if
+! Motif 18
+if (n_point_tot == 18) then
+  position_point(:) = motif_18(n_point,1:3)*radius + nuc_pos(1:3)
 end if
 
 
