@@ -1053,12 +1053,12 @@ if (number_of_centers == 1) then
     d = 1
     do b = 1, pos1_up(d)%n_shells
       do c = 1, pos1_up(d)%n_points(b)
-        write(19,*) pos1_up(d)%point_x_y_z(b,c,1:3)/units_factor
+        write(19,fmt='(3(F13.8,2X))') pos1_up(d)%point_x_y_z(b,c,1:3)/units_factor
       end do
     end do
     do b = 1, pos1_dn(d)%n_shells
       do c = 1, pos1_dn(d)%n_points(b)
-        write(19,*) pos1_dn(d)%point_x_y_z(b,c,1:3)/units_factor
+        write(19,fmt='(3(F13.8,2X))') pos1_dn(d)%point_x_y_z(b,c,1:3)/units_factor
       end do
     end do
     close(unit=19)
@@ -2649,14 +2649,14 @@ else                                                                           !
   do a = 1, size(pos1_up)
     do b = 1, pos1_up(a)%n_shells
       do c = 1, pos1_up(a)%n_points(b)
-        write(19,*) pos1_up(a)%point_x_y_z(b,c,1:3)/units_factor
+        write(19,fmt='(3(F13.8,2X))') pos1_up(a)%point_x_y_z(b,c,1:3)/units_factor
       end do
     end do
   end do
   do a = 1, size(pos1_up)
     do b = 1, pos1_dn(a)%n_shells
       do c = 1, pos1_dn(a)%n_points(b)
-        write(19,*) pos1_dn(a)%point_x_y_z(b,c,1:3)/units_factor
+        write(19,fmt='(3(F13.8,2X))') pos1_dn(a)%point_x_y_z(b,c,1:3)/units_factor
       end do
     end do
   end do
