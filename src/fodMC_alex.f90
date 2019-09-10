@@ -2456,44 +2456,26 @@ else                                                                           !
   dip_y = 0.0
   dip_z = 0.0
   do a = 1, size(pos1_up)                                                       ! for all atoms
-    if (pos1_up(a)%n_shells < 2) then                                           ! exclude 1s. If an atom only has one valence shell (H atom), include the respective FOD positions
-      b = pos1_up(a)%n_shells
+    do b = 1, pos1_up(a)%n_shells                                              ! all UP-FODs
       do c = 1, pos1_up(a)%n_points(b)
         dip_x = dip_x + pos1_up(a)%point_x_y_z(b,c,1) - cent_x
         dip_y = dip_y + pos1_up(a)%point_x_y_z(b,c,2) - cent_y
         dip_z = dip_z + pos1_up(a)%point_x_y_z(b,c,3) - cent_z
       end do
-    else
-      do b = 2, pos1_up(a)%n_shells                                              ! not the innermost shell -> 1s core
-        do c = 1, pos1_up(a)%n_points(b)
-          dip_x = dip_x + pos1_up(a)%point_x_y_z(b,c,1) - cent_x
-          dip_y = dip_y + pos1_up(a)%point_x_y_z(b,c,2) - cent_y
-          dip_z = dip_z + pos1_up(a)%point_x_y_z(b,c,3) - cent_z
-        end do
-      end do
-    end if
-    if (pos1_dn(a)%n_shells < 2) then                                            ! same for the DOWN channel
-      b = pos1_dn(a)%n_shells
+    end do
+    do b = 1, pos1_dn(a)%n_shells                                               ! all DN-FODs
       do c = 1, pos1_dn(a)%n_points(b)
         dip_x = dip_x + pos1_dn(a)%point_x_y_z(b,c,1) - cent_x
         dip_y = dip_y + pos1_dn(a)%point_x_y_z(b,c,2) - cent_y
         dip_z = dip_z + pos1_dn(a)%point_x_y_z(b,c,3) - cent_z
       end do
-    else
-      do b = 2, pos1_dn(a)%n_shells                                               ! not the innermost shell -> 1s core
-        do c = 1, pos1_dn(a)%n_points(b)
-          dip_x = dip_x + pos1_dn(a)%point_x_y_z(b,c,1) - cent_x
-          dip_y = dip_y + pos1_dn(a)%point_x_y_z(b,c,2) - cent_y
-          dip_z = dip_z + pos1_dn(a)%point_x_y_z(b,c,3) - cent_z
-        end do
-      end do
-    end if
+    end do
   end do
   !
   ! Charge and spin evaluated in the beginning of the molecular guess creation
   !
   write(6,fmt='(1X,A,F8.3,2X,A,F8.3,2X,A,3(F12.5,2X))') 'charge = ',charge,' spin = ',spin, &
-                         & ' Point charge dipole (exclude 1s FODs)  ', dip_x, dip_y, dip_z
+                         & ' Point charge dipole ', dip_x, dip_y, dip_z
   write(6,*) ' '
 
   !
