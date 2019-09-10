@@ -47,8 +47,14 @@ Then, type
         bash run.sh
 
 to run the code for a given input in the file *system*.
-If you want to use 'fodMC_motif' instead of 'fodMC', 
+If you want to use e.g. 'fodMC_motif' instead of 'fodMC', 
 you need to change the executable name in the run.sh file.
+
+## Versions
+The original fodMC code ist called fodMC_alex.f90. 
+The next major update was included in fodMC_motif.f90, where structural motifs are used for core FODs (instead of using MC to get them).
+Currently, there are attempts to obtain fodMC_sym.f90. There, bond, lone and core FODs will be generated from structural motifs AND 
+they will be arranged symmetrically. This should conserve the underlying symmetries of the FODs.
 
 ## Manual/Tutorial
 
