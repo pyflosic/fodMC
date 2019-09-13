@@ -53,7 +53,6 @@ you need to change the executable name in the run.sh file.
 ## Versions
 * The original fodMC code is called *fodMC_alex.f90*. 
 * The next major update was included in *fodMC_motif.f90*, where structural motifs are used for core FODs (instead of using MC to get them).
-* Currently, there are attempts to obtain *fodMC_sym.f90*. There, bond, lone and core FODs will be generated from structural motifs AND they will be arranged symmetrically. This should conserve the underlying symmetries of the FODs.
 
 ## Manual/Tutorial
 
