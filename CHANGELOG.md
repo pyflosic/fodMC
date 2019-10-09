@@ -67,3 +67,10 @@
 - Use these for atoms and core FODs
 - No distribution of points on a sphere necessary for such FODs
 - Further, a Metropolis-like algorithm is now used for the rotation of core vs. valence FODs
+
+#### 09/10/2019      KT
+- Changed installation process and execution of the program
+- Use *make* to install
+- Use *./run.sh* to execute
+- Makes for an easier handling
+- Thanks goes to Simon Liebing
