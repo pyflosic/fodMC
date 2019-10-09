@@ -23,7 +23,12 @@ There is a manual, explaining the underlying idea of this program and showing so
 The fodMC is written in FORTRAN. Make sure you have a fortran compiler like gfortran to compile the code.  
 To compile the code, go to the *src* directory and type   
 
+```compile
+make
+```
+```alternative debricated script to compile
         bash compile.sh
+```
 
 There are now two executables. 'fodMC' is the original code, while 'fodMC_motif' uses structural motifs 
 for the generation of atomic guesses and core FODs. Thus, in this version these FODs are not generated 
@@ -41,10 +46,12 @@ correct structural motifs for such systems.
 Go to the folders *examples*. 
 
 You might want to change the relative directory paths in the run.sh to your absolute src-directory (see manual as well).                                         
-
-Then, type 
-
+```Usage bash
         bash run.sh
+```
+```should work with all shells
+./run.sh
+```
 
 to run the code for a given input in the file *system*.
 If you want to use e.g. 'fodMC_motif' instead of 'fodMC', 

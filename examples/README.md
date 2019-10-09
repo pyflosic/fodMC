@@ -5,7 +5,11 @@
 Usage  
 ```bash 
 bash run.sh 
-``` 
+```
+``` should work with other shells too
+./run.sh
+```
+ 
 
 #### system 
 
@@ -25,6 +29,9 @@ bash run.sh
 Usage   
 ```bash 
 bash clean.sh
+```
+``` should work with other shells too
+./clean.sh
 ```
 
 
