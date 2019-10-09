@@ -3,9 +3,6 @@
 - bash script for execution of the fodMC
 
 Usage  
-```bash 
-bash run.sh 
-```
 ``` should work with other shells too
 ./run.sh
 ```
@@ -27,9 +24,6 @@ bash run.sh
 #### clean.sh 
 
 Usage   
-```bash 
-bash clean.sh
-```
 ``` should work with other shells too
 ./clean.sh
 ```

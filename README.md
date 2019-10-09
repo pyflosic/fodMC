@@ -26,9 +26,6 @@ To compile the code, go to the *src* directory and type
 ```compile
 make
 ```
-```alternative debricated script to compile
-        bash compile.sh
-```
 
 There are now two executables. 'fodMC' is the original code, while 'fodMC_motif' uses structural motifs 
 for the generation of atomic guesses and core FODs. Thus, in this version these FODs are not generated 
@@ -46,9 +43,6 @@ correct structural motifs for such systems.
 Go to the folders *examples*. 
 
 You might want to change the relative directory paths in the run.sh to your absolute src-directory (see manual as well).                                         
-```Usage bash
-        bash run.sh
-```
 ```should work with all shells
 ./run.sh
 ```
