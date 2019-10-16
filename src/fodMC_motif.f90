@@ -171,9 +171,9 @@ allocate(core_charge(number_of_centers))
 
 read(17,*) units, junk, junk2                                                   ! read in the unit to be used (angstrom or bohr). and whether PBCs shall be used or not. And whether to fix the 1s FODs at the origin
 if ((units == 'angstrom') .or. (units == 'Angstrom')) then
-  units_factor = 0.529177
+  units_factor = 0.529177D0
 else if ((units == 'bohr') .or. (units == 'Bohr')) then
-  units_factor = 1.000000
+  units_factor = 1.000000D0
 else
   write(6,*) 'Specified unit is neither angstrom nor bohr. Please check the second line of the file "system"'
   stop
@@ -475,9 +475,9 @@ else
 ! Number of lone FODs = (nuclear_charge - core_charge - 1/2*bond_FODs)/2. For UP and DN. If odd number, add more UP FODs
 
   do b = 1, number_of_centers                                                   ! do for all atoms
-    if (((sum(con_mat(b,:)) + sum(con_mat(:,b)))/2.0 + core_charge(b)) < element_number(b)) then
-      lone_fods(b,1) = ceiling((element_number(b)-core_charge(b)-(sum(con_mat(b,:))+sum(con_mat(:,b)))/2.0)/2.0)            ! UP lone FODs. If uneven number of UP and DN -> give it more UP
-      lone_fods(b,2) =   floor((element_number(b)-core_charge(b)-(sum(con_mat(b,:))+sum(con_mat(:,b)))/2.0)/2.0)            ! DN lone FODs. If uneven number of UP and DN -> give it more UP
+    if (((sum(con_mat(b,:)) + sum(con_mat(:,b)))/2.0D0 + core_charge(b)) < element_number(b)) then
+      lone_fods(b,1) = ceiling((element_number(b)-core_charge(b)-(sum(con_mat(b,:))+sum(con_mat(:,b)))/2.0D0)/2.0D0)            ! UP lone FODs. If uneven number of UP and DN -> give it more UP
+      lone_fods(b,2) =   floor((element_number(b)-core_charge(b)-(sum(con_mat(b,:))+sum(con_mat(:,b)))/2.0D0)/2.0D0)            ! DN lone FODs. If uneven number of UP and DN -> give it more UP
     end if
   end do
 
@@ -706,24 +706,24 @@ else
         end if
       end do
       if (pos1_up(a)%elements == 'H' .or. pos1_up(i)%elements == 'H') then                            ! if the distance was taken to a H atoms -> take 1.85*distance/2.0 = 0.875*distance as radius. See further below as well
-        d_bond = d_bond*1.85
+        d_bond = d_bond*1.85D0
       end if
       
       ! INITIALIZE THE POINTS ! Here for valence UP-FODs
       b = pos1_up(a)%n_shells
       do c = 1, pos1_up(a)%n_points(b)
-        pos1_up(a)%r_theta_phi(b,c,1:3) = (/ d_bond/2.0, real(pi/2.0,8), real(0.0,8) /)
+        pos1_up(a)%r_theta_phi(b,c,1:3) = (/ d_bond/2.0D0, real(pi/2.0,8), real(0.0,8) /)
         pos2_up(a)%r_theta_phi(b,c,1:3) = pos1_up(a)%r_theta_phi(b,c,1:3)
-        pos1_up(a)%point_x_y_z(b,c,1:3) = (/ d_bond/2.0 + pos1_up(a)%center_x_y_z(1), &
+        pos1_up(a)%point_x_y_z(b,c,1:3) = (/ d_bond/2.0D0 + pos1_up(a)%center_x_y_z(1), &
                                            & pos1_up(a)%center_x_y_z(2), pos1_up(a)%center_x_y_z(3) /)
         pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
       end do
       ! INITIALIZE THE POINTS ! Here for valence DN-FODs
       b = pos1_dn(a)%n_shells
       do c = 1, pos1_dn(a)%n_points(b)
-        pos1_dn(a)%r_theta_phi(b,c,1:3) = (/ d_bond/2.0, real(pi/2.0,8), real(0.0,8) /)
+        pos1_dn(a)%r_theta_phi(b,c,1:3) = (/ d_bond/2.0D0, real(pi/2.0,8), real(0.0,8) /)
         pos2_dn(a)%r_theta_phi(b,c,1:3) = pos1_dn(a)%r_theta_phi(b,c,1:3)
-        pos1_dn(a)%point_x_y_z(b,c,1:3) = (/ d_bond/2.0 + pos1_dn(a)%center_x_y_z(1), &
+        pos1_dn(a)%point_x_y_z(b,c,1:3) = (/ d_bond/2.0D0 + pos1_dn(a)%center_x_y_z(1), &
                                            & pos1_dn(a)%center_x_y_z(2), pos1_dn(a)%center_x_y_z(3) /)
         pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
       end do
@@ -766,9 +766,9 @@ else if (cycles > 50000) then
   cycles = 50000
 end if
 ! DEFINE STEP SIZE
-step_size = 0.001
+step_size = 0.001D0
 ! DEFINE SCALING FACTOR FOR MULTIPLE BONDS/LONE FODS
-scale_r = 0.60
+scale_r = 0.60D0
 
 !!!write(6,*) ' '
 !!!!write(6,fmt='(A,I7,2X,A,2X,F7.4,2X,A,2X,F7.4)') 'Cycles:',cycles,' Step_size:',step_size,' Scale factor: ',scale_r
@@ -828,7 +828,7 @@ if (number_of_centers == 1) then
       ! invert motif if b is an even number
       !
       if (mod(b,2) == 0) then
-        pos1_up(a)%point_x_y_z(b,c,1:3) = -1.0*pos1_up(a)%point_x_y_z(b,c,1:3)
+        pos1_up(a)%point_x_y_z(b,c,1:3) = -1.0D0*pos1_up(a)%point_x_y_z(b,c,1:3)
       end if
 
       pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
@@ -856,7 +856,7 @@ if (number_of_centers == 1) then
           do d = 1, b-1                                                            ! Use any smaller shell structure and optimize the higher shell according to the lower core structure
             do f = 1, pos1_up(a)%n_points(d)                                       ! Unchanged index, thus index 1
               ave_dist2_up  = ave_dist2_up + &
-                     1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(d,f,:))**2))
+                     1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(d,f,:))**2))
             end do
           end do
         end do
@@ -892,7 +892,7 @@ if (number_of_centers == 1) then
       ! invert motif if b is an odd number
       !
       if (mod(b,2) == 1) then
-        pos1_dn(a)%point_x_y_z(b,c,1:3) = -1.0*pos1_dn(a)%point_x_y_z(b,c,1:3)
+        pos1_dn(a)%point_x_y_z(b,c,1:3) = -1.0D0*pos1_dn(a)%point_x_y_z(b,c,1:3)
       end if
       pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
     end do
@@ -919,7 +919,7 @@ if (number_of_centers == 1) then
           do d = 1, b-1                                                            ! Use any smaller shell structure and optimize the higher shell according to the lower core structure
             do f = 1, pos1_dn(a)%n_points(d)                                       ! Unchanged index, thus index 1
               ave_dist2_dn  = ave_dist2_dn + &
-                     1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(a)%point_x_y_z(d,f,:))**2))
+                     1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(a)%point_x_y_z(d,f,:))**2))
             end do
           end do
         end do
@@ -963,12 +963,12 @@ if (number_of_centers == 1) then
               do f = 1, pos1_up(a)%n_points(e)
                 if (pos2_dn(a)%elements(3:5) == 'ECP' .or. pos2_dn(a)%elements(4:6) == 'ECP') then   ! if ECP are used -> there is no core. Just evaluate the 1/r
                   ave_dist2 = ave_dist2 + &
-                        1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(d,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
+                        1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(d,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
                 else
                   if ((d == 1) .and. (e == 1)) then                                ! avoid evaluating 1s UP and 1s DN (largest contribution) -> makes optimization extremely inefficient !!
                   else
                     ave_dist2  = ave_dist2 + &
-                           1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(d,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
+                           1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(d,c,:) - pos1_up(a)%point_x_y_z(e,f,:))**2))
                   end if
                 end if
               end do
@@ -1015,12 +1015,12 @@ if (number_of_centers == 1) then
     d = 1
     do b = 1, pos1_up(d)%n_shells
       do c = 1, pos1_up(d)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
       end do
     end do
     do b = 1, pos1_dn(d)%n_shells
       do c = 1, pos1_dn(d)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
       end do
     end do
     close(unit=19)
@@ -1071,19 +1071,19 @@ if (number_of_centers == 1) then
     write(19,fmt='(A)') adjustl(junk)
     write(19,*) 'angstrom'
     if (pos1_up(1)%elements(2:2) == '_') then
-      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:1),pos1_up(1)%center_x_y_z(1:3)*0.529177/units_factor ! always in angstrom
+      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:1),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
     else
-      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:2),pos1_up(1)%center_x_y_z(1:3)*0.529177/units_factor
+      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:2),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor
     end if
     d = 1
     do b = 1, pos1_up(d)%n_shells
       do c = 1, pos1_up(d)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
       end do
     end do
     do b = 1, pos1_dn(d)%n_shells
       do c = 1, pos1_dn(d)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
       end do
     end do
     close(unit=19)
@@ -1336,7 +1336,7 @@ else                                                                           !
           !
           ! get bond center and vector describing the bond
           !
-          bond_center(:) = (pos1_up(a)%center_x_y_z(:) + pos1_up(b)%center_x_y_z(:))/2.0
+          bond_center(:) = (pos1_up(a)%center_x_y_z(:) + pos1_up(b)%center_x_y_z(:))/2.0D0
           bond_vector(:) =  pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:) ! vector from b to a          
           if (periodic) then                                                        ! In a peridoic system, take cell vectors into account
             do c = 1, 3
@@ -1346,7 +1346,7 @@ else                                                                           !
                                (c-2)*cell_a(:) + (d-2)*cell_b(:) + (e-2)*cell_c(:))**2)) < &
                                (sqrt(sum(bond_vector(:)**2)))) then
                     bond_center(:) = (pos1_up(a)%center_x_y_z(:) + pos1_up(b)%center_x_y_z(:) + &
-                                     (c-2)*cell_a(:) + (d-2)*cell_b(:) + (e-2)*cell_c(:))/2.0
+                                     (c-2)*cell_a(:) + (d-2)*cell_b(:) + (e-2)*cell_c(:))/2.0D0
                     bond_vector(:) = pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:) + &
                                      (c-2)*cell_a(:) + (d-2)*cell_b(:) + (e-2)*cell_c(:)
                   end if
@@ -1366,10 +1366,10 @@ else                                                                           !
             if (a < b) then                                                    ! Add UP FOD
               c = pos1_up(a)%n_shells                                          ! valence shell UP
               if (pos1_up(a)%elements(1:1) == 'H') then                        ! for H bonds -> place FOD closer to H (0.85*bond length)
-                pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = pos1_up(b)%center_x_y_z(:) + 0.85*bond_vector(:)
+                pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = pos1_up(b)%center_x_y_z(:) + 0.85D0*bond_vector(:)
                 bond_count_up(a) = bond_count_up(a) + 1
               else if (pos1_up(b)%elements(1:1) == 'H') then
-                pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = pos1_up(b)%center_x_y_z(:) + 0.15*bond_vector(:)
+                pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = pos1_up(b)%center_x_y_z(:) + 0.15D0*bond_vector(:)
                 bond_count_up(a) = bond_count_up(a) + 1
               else                                                             ! If not H -> place at the center of the bond
                 pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = bond_center(:)
@@ -1378,10 +1378,10 @@ else                                                                           !
             else                                                               ! Add DN FOD
               c = pos1_dn(a)%n_shells                                          ! valence shell DN
               if (pos1_up(a)%elements(1:1) == 'H') then                        ! for H bonds -> place FOD closer to H (0.85*bond length)
-                pos1_dn(a)%point_x_y_z(c,bond_count_dn(a),:) = pos1_dn(b)%center_x_y_z(:) + 0.85*bond_vector(:)
+                pos1_dn(a)%point_x_y_z(c,bond_count_dn(a),:) = pos1_dn(b)%center_x_y_z(:) + 0.85D0*bond_vector(:)
                 bond_count_dn(a) = bond_count_dn(a) + 1
               else if (pos1_up(b)%elements(1:1) == 'H') then
-                pos1_dn(a)%point_x_y_z(c,bond_count_dn(a),:) = pos1_dn(b)%center_x_y_z(:) + 0.15*bond_vector(:)
+                pos1_dn(a)%point_x_y_z(c,bond_count_dn(a),:) = pos1_dn(b)%center_x_y_z(:) + 0.15D0*bond_vector(:)
                 bond_count_dn(a) = bond_count_dn(a) + 1
               else                                                             ! If not H -> place at the center of the bond
                 pos1_dn(a)%point_x_y_z(c,bond_count_dn(a),:) = bond_center(:)
@@ -1422,7 +1422,7 @@ else                                                                           !
                 ave_dist2 = 0.0
                 do e = 1, con_mat(a,b)-1
                   do f = e+1, con_mat(a,b)
-                    ave_dist2 = ave_dist2 + 1.0/sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
+                    ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
                                                         & pos1_up(a)%point_x_y_z(c,bond_count_up(a) - f,:))**2))
                   end do
                 end do
@@ -1447,7 +1447,7 @@ else                                                                           !
                           end do
                         end do
                       end if
-                      ave_dist2 = ave_dist2 + 1.0/tmp_dist
+                      ave_dist2 = ave_dist2 + 1.0D0/tmp_dist
                     end do
                   end if
                   !
@@ -1471,7 +1471,7 @@ else                                                                           !
                             end do
                           end do
                         end if
-                        ave_dist2 = ave_dist2 + 1.0/tmp_dist
+                        ave_dist2 = ave_dist2 + 1.0D0/tmp_dist
                       end do
                     end if
                   end do
@@ -1510,7 +1510,7 @@ else                                                                           !
                     !
                     do g = 1, pos1_up(a)%n_points(c)                            ! all valence
                       if (g /= (bond_count_up(a) - e)) then                     ! exclude same point
-                        ave_dist2 = ave_dist2 + 1.0/sqrt(sum((pos2_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
+                        ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
                                                        & pos2_up(a)%point_x_y_z(c,g,:))**2))
                       end if
                     end do
@@ -1570,7 +1570,7 @@ else                                                                           !
                   ave_dist2 = 0.0
                   do e = 1, con_mat(a,b)-1
                     do f = e+1, con_mat(a,b)
-                      ave_dist2 = ave_dist2 + 1.0/sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
+                      ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
                                               & pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - f,:))**2))
                     end do
                   end do
@@ -1595,7 +1595,7 @@ else                                                                           !
                             end do
                           end do
                         end if
-                        ave_dist2 = ave_dist2 + 1.0/tmp_dist  
+                        ave_dist2 = ave_dist2 + 1.0D0/tmp_dist  
                       end do
                     end if
                     !
@@ -1620,7 +1620,7 @@ else                                                                           !
                               end do
                             end do
                           end if
-                          ave_dist2 = ave_dist2 + 1.0/tmp_dist
+                          ave_dist2 = ave_dist2 + 1.0D0/tmp_dist
                         end do
                       end if
                     end do
@@ -1659,7 +1659,7 @@ else                                                                           !
                       !
                       do g = 1, pos1_dn(a)%n_points(c)                            ! all valence
                         if (g /= (bond_count_dn(a) - e)) then                     ! exclude same point
-                          ave_dist2 = ave_dist2 + 1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
+                          ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
                                                          & pos2_dn(a)%point_x_y_z(c,g,:))**2))
                         end if
                       end do
@@ -1767,12 +1767,12 @@ else                                                                           !
                 continue
               else
                 ave_dist2_up = ave_dist2_up + &
-                   1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos2_up(a)%point_x_y_z(b,f,:))**2))
+                   1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos2_up(a)%point_x_y_z(b,f,:))**2))
               end if
             end do
 
             do d = 1,size(pos1_up)                                                                                     ! Take the 1/r to all atoms -> better symmetry
-              ave_dist2_up = ave_dist2_up + 1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - &                            ! change '+' to '-' to place the lone FODs towards the other atoms
+              ave_dist2_up = ave_dist2_up + 1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - &                            ! change '+' to '-' to place the lone FODs towards the other atoms
                                                         & pos1_up(d)%center_x_y_z(:))**2))
             end do
           end do
@@ -1834,12 +1834,12 @@ else                                                                           !
                   continue
                 else
                   ave_dist2_dn = ave_dist2_dn + &
-                     1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(b,f,:))**2))
+                     1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(b,f,:))**2))
                 end if
               end do
 
               do d = 1,size(pos1_dn)                                                                                    ! Take the 1/r to all atoms -> better symmetry
-                ave_dist2_dn = ave_dist2_dn + 1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - &                           ! change '+' to '-' to place the lone FODs towards the other atoms
+                ave_dist2_dn = ave_dist2_dn + 1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - &                           ! change '+' to '-' to place the lone FODs towards the other atoms
                                                           & pos1_dn(d)%center_x_y_z(:))**2))
               end do
             end do
@@ -1927,12 +1927,12 @@ else                                                                           !
             f = pos1_up(a)%n_shells
             g = pos1_up(a)%n_points(f)-lone_fods(a,1)+1                                                      ! outermost shell -> get radius of that shell
             bond_center(:) = pos1_up(a)%center_x_y_z(:) + &
-            & 1.0/((lone_fods(a,1)+lone_fods(a,2))/2.0)*tmp_vectors(2,:)*pos1_up(a)%r_theta_phi(f,g,1)       ! UP channel, scale to number of lone FODs
+            & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*tmp_vectors(2,:)*pos1_up(a)%r_theta_phi(f,g,1)       ! UP channel, scale to number of lone FODs
           else if (lone_fods(a,2) > 0) then
             f = pos1_dn(a)%n_shells
             g = pos1_dn(a)%n_points(f)-lone_fods(a,2)+1
             bond_center(:) = pos1_dn(a)%center_x_y_z(:) + &
-            & 1.0/((lone_fods(a,1)+lone_fods(a,2))/2.0)*tmp_vectors(2,:)*pos1_dn(a)%r_theta_phi(f,g,1)       ! DN channel
+            & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*tmp_vectors(2,:)*pos1_dn(a)%r_theta_phi(f,g,1)       ! DN channel
           end if
           deallocate(tmp_vectors)
         ! 
@@ -1973,7 +1973,7 @@ else                                                                           !
             f = pos1_up(a)%n_shells
             g = pos1_up(a)%n_points(f)-lone_fods(a,1)+1                                                      ! outermost shell -> get radius of that shell
             bond_center(:) = pos1_up(a)%center_x_y_z(:) + &
-            & 1.0/((lone_fods(a,1)+lone_fods(a,2))/2.0)*perpendicular_vec(:)*pos1_up(a)%r_theta_phi(f,g,1)   ! UP channel
+            & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*perpendicular_vec(:)*pos1_up(a)%r_theta_phi(f,g,1)   ! UP channel
             if ((lone_fods(a,1) == 1) .and. (lone_fods(a,2) == 0)) then                                      ! in case there is only exactly one lone FODs (none in the other spin channel)
               bond_center(:) = pos1_up(a)%center_x_y_z(:) + perpendicular_vec(:)*pos1_up(a)%r_theta_phi(f,g,1)   
             end if              
@@ -1981,7 +1981,7 @@ else                                                                           !
             f = pos1_dn(a)%n_shells
             g = pos1_dn(a)%n_points(f)-lone_fods(a,2)+1
             bond_center(:) = pos1_dn(a)%center_x_y_z(:) + &
-            & 1.0/((lone_fods(a,1)+lone_fods(a,2))/2.0)*perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(f,g,1)   ! DN
+            & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(f,g,1)   ! DN
             if ((lone_fods(a,1) == 0) .and. (lone_fods(a,2) == 1)) then                                      ! in case there is only exactly one lone FODs (none in the other spin channel)
               bond_center(:) = pos1_up(a)%center_x_y_z(:) + perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(f,g,1)   
             end if              
@@ -1999,12 +1999,12 @@ else                                                                           !
             f = pos1_up(a)%n_shells
             g = pos1_up(a)%n_points(f)-lone_fods(a,1)+1                                                      ! outermost shell -> get radius of that shell
             bond_center(:) = pos1_up(a)%center_x_y_z(:) + &
-            & 1.0/((lone_fods(a,1)+lone_fods(a,2))/2.0)*bond_vector(:)*pos1_up(a)%r_theta_phi(f,g,1)         ! UP Scale to number of lone FODs -> bring multiple lone_FODs closer to the atoms
+            & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*bond_vector(:)*pos1_up(a)%r_theta_phi(f,g,1)         ! UP Scale to number of lone FODs -> bring multiple lone_FODs closer to the atoms
           else if (lone_fods(a,2) > 0) then
             f = pos1_dn(a)%n_shells
             g = pos1_dn(a)%n_points(f)-lone_fods(a,2)+1
             bond_center(:) = pos1_up(a)%center_x_y_z(:) + &
-            & 1.0/((lone_fods(a,1)+lone_fods(a,2))/2.0)*bond_vector(:)*pos1_dn(a)%r_theta_phi(f,g,1)         ! DN
+            & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*bond_vector(:)*pos1_dn(a)%r_theta_phi(f,g,1)         ! DN
           end if
         end if
 
@@ -2086,7 +2086,7 @@ else                                                                           !
                     else
 ! HERE: periodicity?
                       ave_dist2_up = ave_dist2_up + &
-                         1.0/sqrt(sum((pos1_up(a)%point_x_y_z(b,c,:) - pos1_up(d)%point_x_y_z(e,f,:))**2))
+                         1.0D0/sqrt(sum((pos1_up(a)%point_x_y_z(b,c,:) - pos1_up(d)%point_x_y_z(e,f,:))**2))
                     end if
                   end do
                 end if
@@ -2163,7 +2163,7 @@ else                                                                           !
                       else
 ! HERE: Periodicity?
                         ave_dist2_dn = ave_dist2_dn + &
-                           1.0/sqrt(sum((pos1_dn(a)%point_x_y_z(b,c,:) - pos1_dn(d)%point_x_y_z(e,f,:))**2))
+                           1.0D0/sqrt(sum((pos1_dn(a)%point_x_y_z(b,c,:) - pos1_dn(d)%point_x_y_z(e,f,:))**2))
                       end if
                     end do
                   end if
@@ -2248,7 +2248,7 @@ else                                                                           !
             do d = 1, b-1                                                            ! Use any smaller shell structure and optimize the higher shell according to the lower core structure
               do f = 1, pos1_up(a)%n_points(d)                                       ! Unchanged index, thus index 1
                 ave_dist2_up  = ave_dist2_up + &
-                       1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(d,f,:))**2))
+                       1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(a)%point_x_y_z(d,f,:))**2))
               end do
             end do
           end do
@@ -2295,7 +2295,7 @@ else                                                                           !
             d = pos1_up(g)%n_shells                                                ! Outermost fods
             do f = 1, pos1_up(g)%n_points(d)                                       ! 
               ave_dist2_up  = ave_dist2_up + &
-                     1.0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(g)%point_x_y_z(d,f,:))**2))
+                     1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos1_up(g)%point_x_y_z(d,f,:))**2))
             end do
           end do
         end do
@@ -2352,7 +2352,7 @@ else                                                                           !
             do d = 1, b-1                                                            ! Use any smaller shell structure and optimize the higher shell according to the lower core structure
               do f = 1, pos1_dn(a)%n_points(d)                                       ! Unchanged index, thus index 1
                 ave_dist2_dn  = ave_dist2_dn + &
-                       1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(a)%point_x_y_z(d,f,:))**2))
+                       1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(a)%point_x_y_z(d,f,:))**2))
               end do
             end do
           end do
@@ -2399,7 +2399,7 @@ else                                                                           !
             d = pos1_dn(g)%n_shells                                                ! Outermost fods
             do f = 1, pos1_dn(g)%n_points(d)                                       ! 
               ave_dist2_dn  = ave_dist2_dn + &
-                      1.0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(g)%point_x_y_z(d,f,:))**2))
+                      1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos1_dn(g)%point_x_y_z(d,f,:))**2))
             end do
           end do
         end do
@@ -2492,9 +2492,9 @@ else                                                                           !
 ! Sum r_{FODs} - SUM r_{atoms}
 ! Calculate with respect to the center of all atoms
 ! 
-  cent_x = 0.0
-  cent_y = 0.0
-  cent_z = 0.0
+  cent_x = 0.0D0
+  cent_y = 0.0D0
+  cent_z = 0.0D0
   do a = 1, size(pos1_up)
     cent_x = cent_x + pos1_up(a)%center_x_y_z(1)
     cent_y = cent_y + pos1_up(a)%center_x_y_z(2)
@@ -2504,9 +2504,9 @@ else                                                                           !
   cent_y = cent_y/size(pos1_up)
   cent_z = cent_z/size(pos1_up)
 
-  dip_x = 0.0                                                                   ! initialize with 0
-  dip_y = 0.0
-  dip_z = 0.0
+  dip_x = 0.0D0                                                                   ! initialize with 0
+  dip_y = 0.0D0
+  dip_z = 0.0D0
   do a = 1, size(pos1_up)                                                       ! for all atoms
     do b = 1, pos1_up(a)%n_shells                                              ! and all UP-FODs
       do c = 1, pos1_up(a)%n_points(b)
@@ -2543,13 +2543,13 @@ else                                                                           !
     len_a = sqrt(cell_a(1)**2+cell_a(2)**2+cell_a(3)**2)
     len_b = sqrt(cell_b(1)**2+cell_b(2)**2+cell_b(3)**2)
     len_c = sqrt(cell_c(1)**2+cell_c(2)**2+cell_c(3)**2)
-    angle_bc = ACOS((cell_b(1)*cell_c(1) + cell_b(2)*cell_c(2) + cell_b(3)*cell_c(3))/(len_b*len_c))*180.0/pi
-    angle_ac = ACOS((cell_a(1)*cell_c(1) + cell_a(2)*cell_c(2) + cell_a(3)*cell_c(3))/(len_a*len_c))*180.0/pi
-    angle_ab = ACOS((cell_a(1)*cell_b(1) + cell_a(2)*cell_b(2) + cell_a(3)*cell_b(3))/(len_a*len_b))*180.0/pi
+    angle_bc = ACOS((cell_b(1)*cell_c(1) + cell_b(2)*cell_c(2) + cell_b(3)*cell_c(3))/(len_b*len_c))*180.0D0/pi
+    angle_ac = ACOS((cell_a(1)*cell_c(1) + cell_a(2)*cell_c(2) + cell_a(3)*cell_c(3))/(len_a*len_c))*180.0D0/pi
+    angle_ab = ACOS((cell_a(1)*cell_b(1) + cell_a(2)*cell_b(2) + cell_a(3)*cell_b(3))/(len_a*len_b))*180.0D0/pi
 
-    len_a = sqrt(cell_a(1)**2+cell_a(2)**2+cell_a(3)**2)*0.529177/units_factor ! always in angstrom
-    len_b = sqrt(cell_b(1)**2+cell_b(2)**2+cell_b(3)**2)*0.529177/units_factor
-    len_c = sqrt(cell_c(1)**2+cell_c(2)**2+cell_c(3)**2)*0.529177/units_factor
+    len_a = sqrt(cell_a(1)**2+cell_a(2)**2+cell_a(3)**2)*0.529177D0/units_factor ! always in angstrom
+    len_b = sqrt(cell_b(1)**2+cell_b(2)**2+cell_b(3)**2)*0.529177D0/units_factor
+    len_c = sqrt(cell_c(1)**2+cell_c(2)**2+cell_c(3)**2)*0.529177D0/units_factor
 
     open(unit=19,file='Nuc_FOD.cif',status='unknown',action='write')
     write(19,*) '# fodMC guess'
@@ -2653,22 +2653,22 @@ else                                                                           !
   write(19,fmt='(A)') 'angstrom'
   do a = 1, size(pos1_up)
     if (pos1_up(a)%elements(2:2) == '_') then
-      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:1),pos1_up(a)%center_x_y_z(1:3)*0.529177/units_factor ! always in angstrom
+      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:1),pos1_up(a)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
     else
-      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:2),pos1_up(a)%center_x_y_z(1:3)*0.529177/units_factor
+      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:2),pos1_up(a)%center_x_y_z(1:3)*0.529177D0/units_factor
     end if
   end do
   do a = 1, size(pos1_up)
     do b = 1, pos1_up(a)%n_shells
       do c = 1, pos1_up(a)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(a)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(a)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
       end do
     end do
   end do
   do a = 1, size(pos1_up)
     do b = 1, pos1_dn(a)%n_shells
       do c = 1, pos1_dn(a)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(a)%point_x_y_z(b,c,1:3)*0.529177/units_factor
+        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(a)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
       end do
     end do
   end do
@@ -2883,27 +2883,27 @@ if (sqrt(sum(per_vec(:)**2)) < 1.0D-6) then                ! if no proper perpen
       per_vec(1) = real(0.0,8)
       if (abs(bond_vec(2)) >= abs(bond_vec(3))) then                                                   ! y larger than z
         per_vec(2) = real(1.0,8)
-        per_vec(3) = -1.0*bond_vec(2)/bond_vec(3)
+        per_vec(3) = -1.0D0*bond_vec(2)/bond_vec(3)
       else
-        per_vec(2) = -1.0*bond_vec(3)/bond_vec(2)
+        per_vec(2) = -1.0D0*bond_vec(3)/bond_vec(2)
         per_vec(3) = real(1.0,8)
       end if
     else if (abs(bond_vec(2)) <= abs(bond_vec(1)) .and. (abs(bond_vec(2)) <= abs(bond_vec(3)))) then   ! y is smallest
       per_vec(2) = real(0.0,8)
       if (abs(bond_vec(1)) >= abs(bond_vec(3))) then                                                   ! x larger than z
         per_vec(1) = real(1.0,8)
-        per_vec(3) = -1.0*bond_vec(1)/bond_vec(3)
+        per_vec(3) = -1.0D0*bond_vec(1)/bond_vec(3)
       else
-        per_vec(1) = -1.0*bond_vec(3)/bond_vec(1)
+        per_vec(1) = -1.0D0*bond_vec(3)/bond_vec(1)
         per_vec(3) = real(1.0,8)
       end if
     else                                                                                               ! z is smallest
       per_vec(3) = real(0.0,8)
       if (abs(bond_vec(1)) >= abs(bond_vec(2))) then                                                   ! x larger than y
         per_vec(1) = real(1.0,8)
-        per_vec(2) = -1.0*bond_vec(1)/bond_vec(2)
+        per_vec(2) = -1.0D0*bond_vec(1)/bond_vec(2)
       else
-        per_vec(1) = -1.0*bond_vec(2)/bond_vec(1)
+        per_vec(1) = -1.0D0*bond_vec(2)/bond_vec(1)
         per_vec(2) = real(1.0,8)
       end if
     end if
@@ -2930,9 +2930,9 @@ real(8), parameter     :: pi = 3.14159265358979323846
 lenA    = sqrt(vecA(1)**2+vecA(2)**2+vecA(3)**2)
 lenB    = sqrt(vecB(1)**2+vecB(2)**2+vecB(3)**2)
 lenC    = sqrt(vecC(1)**2+vecC(2)**2+vecC(3)**2)
-angleBC = ACOS((vecB(1)*vecC(1) + vecB(2)*vecC(2) + vecB(3)*vecC(3))/(lenB*lenC))*180.0/pi
-angleAC = ACOS((vecA(1)*vecC(1) + vecA(2)*vecC(2) + vecA(3)*vecC(3))/(lenA*lenC))*180.0/pi
-angleAB = ACOS((vecA(1)*vecB(1) + vecA(2)*vecB(2) + vecA(3)*vecB(3))/(lenA*lenB))*180.0/pi
+angleBC = ACOS((vecB(1)*vecC(1) + vecB(2)*vecC(2) + vecB(3)*vecC(3))/(lenB*lenC))*180.0D0/pi
+angleAC = ACOS((vecA(1)*vecC(1) + vecA(2)*vecC(2) + vecA(3)*vecC(3))/(lenA*lenC))*180.0D0/pi
+angleAB = ACOS((vecA(1)*vecB(1) + vecA(2)*vecB(2) + vecA(3)*vecB(3))/(lenA*lenB))*180.0D0/pi
 !!!! Calculate the total unit cell volume using the triple product V = a . (b x c) 
 !!!vol     = (vecA(1)*vecB(2)*vecC(3) + vecA(2)*vecB(3)*vecC(1) + vecA(3)*vecB(1)*vecC(2) - &
 !!!           vecA(3)*vecB(2)*vecC(1) - vecA(1)*vecB(3)*vecC(2) - vecA(2)*vecB(1)*vecC(3))
