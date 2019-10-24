@@ -1222,7 +1222,13 @@ else                                                                           !
           counter = counter + 1
         end if
       end do
-      if (counter > 1) then
+      !
+      ! if counter == 2 -> always in a plane
+      !
+      if (counter==2) then
+        is_planar_linear(a) = 1
+      
+      else if (counter > 2) then
         allocate(tmp_vectors(counter+(counter*(counter-1)/2),3))                ! store bond vectors (counter) and perpendicular vectors (counter*(counter-1)/2)
         c = 0                                                                   ! counter for the determination of how many bond vectors are needed
         t = 0                                                                   ! checking counter. If it always increased for all pairs of bonds -> do something
@@ -2554,19 +2560,19 @@ else                                                                           !
     open(unit=19,file='Nuc_FOD.cif',status='unknown',action='write')
     write(19,*) '# fodMC guess'
     write(19,*) ' '
-    write(19,*) "_chemical_name_common                  'fodMC'"
+    write(19,fmt='(A)') "_chemical_name_common                  'fodMC'"
     write(19,fmt='(A,F13.8)') "_cell_length_a                         ",len_a
     write(19,fmt='(A,F13.8)') "_cell_length_b                         ",len_b
     write(19,fmt='(A,F13.8)') "_cell_length_c                         ",len_c
     write(19,fmt='(A,F9.4)') "_cell_angle_alpha                      ",angle_bc
     write(19,fmt='(A,F9.4)') "_cell_angle_beta                       ",angle_ac
     write(19,fmt='(A,F9.4)') "_cell_angle_gamma                      ",angle_ab
-    write(19,*) "_space_group_name_H-M_alt              'P 1'"
-    write(19,*) "loop_"
-    write(19,*) "   _atom_site_type_symbol"
-    write(19,*) "   _atom_site_fract_x"
-    write(19,*) "   _atom_site_fract_y"
-    write(19,*) "   _atom_site_fract_z"
+    write(19,fmt='(A)') "_space_group_name_H-M_alt              'P 1'"
+    write(19,fmt='(A)') "loop_"
+    write(19,fmt='(A)') "   _atom_site_type_symbol"
+    write(19,fmt='(A)') "   _atom_site_fract_x"
+    write(19,fmt='(A)') "   _atom_site_fract_y"
+    write(19,fmt='(A)') "   _atom_site_fract_z"
     do a = 1, size(pos1_up)
       call cart_to_frac(cell_a(1:3),cell_b(1:3),cell_c(1:3),pos1_up(a)%center_x_y_z(1:3),pos2_up(a)%center_x_y_z(1:3))
       if (pos1_up(a)%elements(2:2) == '_') then
