@@ -9,7 +9,7 @@ Main developer:
 Sidekicks:  
 
 * Alex Johnson (AJ, johns1ai@cmich.edu)   
-* Jakob Kraus (JaK, jakob.kraus@student.tu-freiberg.de)   
+* Jakob Kraus (JaK, jakob.kraus@physik.tu-freiberg.de)   
 * Sebastian Schwalbe (SS, theonov13@gmail.com)    
 
 Coding language: FORTRAN   
