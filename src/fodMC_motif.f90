@@ -1223,12 +1223,53 @@ else                                                                           !
         end if
       end do
       !
-      ! if counter == 2 -> always in a plane
+      ! When an atom has exactly two bonds -> check whether it is in a linear environment or not -> dot product of the bond vectors needs to be -1 or 1 (angle either 0 or 180)
+      ! If not -> planar
       !
-      if (counter==2) then
-        is_planar_linear(a) = 1
-      
-      else if (counter > 2) then
+      if (counter == 2) then
+        counter = 0
+        allocate(tmp_vectors(2,3))
+        do b = 1, size(pos1_up)
+          if (con_mat(a,b) /= 0) then
+            counter = counter + 1
+            tmp_vectors(counter,:) = (pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:))
+            if (periodic) then                                                  ! In a peridoic system, take cell vectors into account
+              do d = 1, 3
+                do e = 1, 3
+                  do f = 1, 3
+                    if (sqrt(sum((pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:) + &
+                                 (d-2)*cell_a(:) + (e-2)*cell_b(:) + (f-2)*cell_c(:))**2)) < &
+                                 (sqrt(sum(tmp_vectors(counter,:)**2)))) then
+                      tmp_vectors(counter,:) = pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:) + &
+                                               (d-2)*cell_a(:) + (e-2)*cell_b(:) + (f-2)*cell_c(:)
+                    end if
+                  end do
+                end do
+              end do
+            end if 
+          end if
+        end do
+        t = 0
+        do c = 1, counter-1
+          do d = c+1, counter
+            if (abs(dot_product(tmp_vectors(c,:),tmp_vectors(d,:)/&
+               (sqrt(sum(tmp_vectors(c,:)**2))*sqrt(sum(tmp_vectors(d,:)**2))))) > 0.98) then
+              t = t + 1
+            end if
+          end do
+        end do
+        if (t == (counter*(counter-1))/2) then
+          is_planar_linear(a) = 2
+        else
+          is_planar_linear(a) = 1
+        end if
+        deallocate(tmp_vectors)
+      end if
+
+      !
+      ! For more bonds
+      !
+      if (counter > 2) then
         allocate(tmp_vectors(counter+(counter*(counter-1)/2),3))                ! store bond vectors (counter) and perpendicular vectors (counter*(counter-1)/2)
         c = 0                                                                   ! counter for the determination of how many bond vectors are needed
         t = 0                                                                   ! checking counter. If it always increased for all pairs of bonds -> do something
@@ -1291,23 +1332,6 @@ else                                                                           !
         !
         if (t == (counter*(counter-1))/2) then
           is_planar_linear(a) = 1
-        end if
-        !
-        ! When an atom has exactly two bonds -> check whether it is in a linear environment or not -> dot product of the bond vectors needs to be -1 or 1 (angle either 0 or 180)
-        !
-        if (counter == 2) then
-          t = 0
-          do c = 1, counter-1
-            do d = c+1, counter
-              if (abs(dot_product(tmp_vectors(c,:),tmp_vectors(d,:)/&
-                 (sqrt(sum(tmp_vectors(c,:)**2))*sqrt(sum(tmp_vectors(d,:)**2))))) > 0.98) then
-                t = t + 1
-              end if
-            end do
-          end do
-          if (t == (counter*(counter-1))/2) then
-            is_planar_linear(a) = 2
-          end if
         end if
         !
         ! deallocate for next atom
@@ -1501,7 +1525,7 @@ else                                                                           !
               ! analyze whether atoms is in an linear environemnt.
               ! If so -> minimize 1/r to neighbouring FODs via rotations
               !
-              if (is_planar_linear(a) == 2) then 
+              if (is_planar_linear(a) == 2) then
                 do d = 1, cycles
                   ave_dist2 = 0.0
                   !
@@ -1514,10 +1538,13 @@ else                                                                           !
                     !
                     ! evaluate 1/r
                     !
-                    do g = 1, pos1_up(a)%n_points(c)                            ! all valence
-                      if (g /= (bond_count_up(a) - e)) then                     ! exclude same point
-                        ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
-                                                       & pos2_up(a)%point_x_y_z(c,g,:))**2))
+                    do f = 1, size(pos1_up)
+                      if (con_mat(a,f) /= 0) then
+                        i = pos1_up(f)%n_shells
+                        do g = 1, pos1_up(f)%n_points(i)
+                          ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
+                                                       & pos2_up(f)%point_x_y_z(i,g,:))**2))
+                        end do
                       end if
                     end do
                   end do
@@ -1663,10 +1690,13 @@ else                                                                           !
                       !
                       ! evaluate 1/r
                       !
-                      do g = 1, pos1_dn(a)%n_points(c)                            ! all valence
-                        if (g /= (bond_count_dn(a) - e)) then                     ! exclude same point
-                          ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
-                                                         & pos2_dn(a)%point_x_y_z(c,g,:))**2))
+                      do f = 1, size(pos1_dn)
+                        if (con_mat(a,f) /= 0) then
+                          i = pos1_dn(f)%n_shells
+                          do g = 1, pos1_dn(f)%n_points(i)
+                            ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
+                                                         & pos2_dn(f)%point_x_y_z(i,g,:))**2))
+                          end do
                         end if
                       end do
                     end do
