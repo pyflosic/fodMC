@@ -1902,12 +1902,14 @@ else                                                                           !
       ! If there are bonds to the specific atom ! 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       else
+        counter = 0             ! count how many bonds there are
         bond_vector(:) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)                                                   ! initialize bond vector
         do b = 1, size(pos1_up)                                                                                        ! for each other atom
           !
           ! get vector describing the bond. For each bond to an atom, as specified in con_mat
           !
           if (con_mat(a,b) /= 0) then                                                                                  ! for different atoms which are bonded
+            counter = counter + 1
             !
             ! get vector describing all bonds
             !
@@ -1974,7 +1976,7 @@ else                                                                           !
         ! 
         ! Planar
         !
-        else if (is_planar_linear(a) == 1) then
+        else if (is_planar_linear(a) == 1.and.(counter > 2)) then ! more than two bonds!
           !
           ! get cross product of two vectors to adjacent atoms -> cross product will give a perpendicular vector
           ! 
