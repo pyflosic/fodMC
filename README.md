@@ -29,7 +29,7 @@ make
 
 There are now two executables. 'fodMC' is the original code, while 'fodMC_motif' uses structural motifs 
 for the generation of atomic guesses and core FODs. Thus, in this version these FODs are not generated 
-by the distribution of points on a sphere (beta test version).
+by the distribution of points on a sphere.
 
 # ATTENTION
 Initial FODs for transition metals and larger atoms may currently not be reliable.
