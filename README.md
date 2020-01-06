@@ -61,3 +61,6 @@ There is a manual in the 'doc' folder, called fodMC.pdf.
 Furthermore, there are several tutorial videos about the 
 usage and handling of the fodMC at youtube, 
 at the channel 'The extended Physiker Clan'.
+
+In addition, there is a publication summarizing essential findings regarding FODs, see 
+'Interpretation and automatic generation of Fermi-orbital descriptors', S. Schwalbe, K. Trepte, et al., Journal of Computational Chemistry, vol. 40, pp. 2843-2857, 2019
