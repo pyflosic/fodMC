@@ -6,5 +6,5 @@
 fodmc="$(dirname "$(pwd)")"
 echo $fodmc
 cp $fodmc/src/xx_database_xx . 
-$fodmc/src/fodMC
-#$fodmc/src/fodMC_motif
+#$fodmc/src/fodMC
+$fodmc/src/fodMC_motif
