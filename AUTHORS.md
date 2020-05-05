@@ -8,6 +8,12 @@ email: trept1k@cmich.edu
 # co-developers: 
 Additional features, code testing and improvements.
 
+#### Sebastian Schwalbe, M. Sc.  
+email: theonov13@gmail.com
+- pyfodMC_GUI 
+- source code structuring 
+- ideas for improvements of the fodMC (simplification of input) 
+
 #### Alex Johnson
 email: johns1ai@cmich.edu
 - initial idea for the connectivity matrix 
@@ -15,9 +21,3 @@ email: johns1ai@cmich.edu
 #### Jakob Kraus, B. Sc. 
 email: jakob.kraus@student.tu-freiberg.de
 - improvement for the connectivity matrix 
-
-#### Sebastian Schwalbe, M. Sc.  
-email: theonov13@gmail.com
-- pyfodmc 
-- source code structuring 
-- ideas for improvements of the fodMC (simplification of input) 

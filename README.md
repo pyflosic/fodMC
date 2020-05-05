@@ -38,7 +38,7 @@ might not represent a good guess for such systems. Intensive research is needed 
 correct structural motifs for such systems.
 
 
-## Running the code 
+## Running the code (in the shell, no GUI) 
 
 Go to the folders *examples*. 
 
@@ -50,6 +50,14 @@ You might want to change the relative directory paths in the run.sh to your abso
 to run the code for a given input in the file *system*.
 If you want to use e.g. 'fodMC_motif' instead of 'fodMC', 
 you need to change the executable name in the run.sh file.
+
+## Running the code (Python-based GUI)
+
+Go to the folder *pyfodMC_GUI*.
+In the *examples* folder, one can find how to use the graphical user interface (GUI) of the fodMC. 
+
+Thanks goes to Sebastian Schwalbe for developing this GUI.
+
 
 ## Versions
 * The original fodMC code is called *fodMC_alex.f90*. 
