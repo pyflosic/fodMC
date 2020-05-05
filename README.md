@@ -48,7 +48,7 @@ You might want to change the relative directory paths in the run.sh to your abso
 ```
 
 to run the code for a given input in the file *system*.
-If you want to use e.g. 'fodMC_motif' instead of 'fodMC', 
+If you want to use e.g. 'fodMC' instead of 'fodMC_motif', 
 you need to change the executable name in the run.sh file.
 
 ## Running the code (Python-based GUI)
