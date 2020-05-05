@@ -74,3 +74,15 @@
 - Use *./run.sh* to execute
 - Makes for an easier handling
 - Thanks goes to Simon Liebing
+
+#### 18/10/2019      KT
+- Update introduced in *fodMC_sym*
+- Structural motifs are used for bond and lone FODs
+- placing bond and lone FODs more symmetrically
+- provides better starting points
+- will be published soon
+
+### 05/05/2020       KT
+- Introduce pyfodMC_GUI
+- Thanks to Sebastian Schwalbe
+
