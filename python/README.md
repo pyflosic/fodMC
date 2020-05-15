@@ -1,4 +1,4 @@
-# pyfodmc - fodmc as a pyhthon package
+# pyfodmc - fodMC as a pyhthon package
 - author: Sebastian Schwalbe 
 - programming language: FORTRAN, Python3 
 
