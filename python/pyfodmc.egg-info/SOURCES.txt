@@ -1,0 +1,9 @@
+setup.py
+pyfodmc/__init__.py
+pyfodmc/pyfodmc.py
+pyfodmc.egg-info/PKG-INFO
+pyfodmc.egg-info/SOURCES.txt
+pyfodmc.egg-info/dependency_links.txt
+pyfodmc.egg-info/top_level.txt
+pyfodmc/lib/__init__.py
+pyfodmc/lib/fodmc.f90
