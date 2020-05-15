@@ -1,0 +1,11 @@
+*.so 
+*.cube
+*.chk
+*.pyc
+*.log
+*.tmp
+*.dat
+*.out 
+*.swp
+*.egg-info
+log 
