@@ -7,6 +7,59 @@
 #               re-included the python interface 
 import fodmc 
 from ase.io import read,write  
+import os 
+
+def get_database(input_file='xx_database_xx'):
+    f = open(os.path.dirname(os.path.abspath(__file__))+'/'+input_file,'r') 
+    ll = f.readlines()
+    f.close() 
+    p = os.getcwd() 
+    o = open(p+'/'+input_file,'w')
+    for l in range(len(ll)):
+        o.write(ll[l]) 
+    o.close() 
+
+def clean_files(): 
+    files = ['CLUSTER','FRMORB','system','xx_database_xx']
+    for f in files: 
+        try:
+            if os.path.exists(f):
+                os.remove(f)
+        except: 'Nothing' 
+
+def rename_xyz(name):
+    os.rename('Nuc_FOD.xyz',name+'.xyz')
+
+
+def get_guess(name='fodMC'):
+    # cp the database to the calculation folder 
+    get_database(input_file='xx_database_xx')
+    # magic to capture that output:
+    # from http://stackoverflow.com/questions/977840/redirecting-fortran-called-via-f2py-output-in-python
+    #      http://websrv.cs.umt.edu/isis/index.php/F2py_example
+    output_file = name + '.out' 
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    # open outputfile
+    outfile = os.open(output_file, os.O_RDWR|os.O_CREAT)
+    # save the current file descriptor
+    save = os.dup(1)
+    # put outfile on 1
+    os.dup2(outfile, 1)
+    # end magic
+    # FORTAN call 
+    fodmc.fodmc.get_guess()
+    # restore the standard output file descriptor
+    os.dup2(save, 1)
+    # close the output file
+    os.close(outfile)
+    f = open(output_file,'r')
+    output = f.read()
+    f.close()
+    # rm files which are not needed 
+    clean_files()
+    # rename output xyz
+    rename_xyz(name)
 
 def write_pyfodmc_atoms(sys):
     #
