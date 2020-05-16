@@ -8,4 +8,5 @@
 *.out 
 *.swp
 *.egg-info
+build/ 
 log 
