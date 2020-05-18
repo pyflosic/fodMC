@@ -68,7 +68,7 @@ def write_pyfodmc_atoms(sys):
     # create system file 
     f = open('system','w')
     f.write('1 %s\n' % sys)
-    f.write('bohr\n')
+    f.write('angstrom fix1s\n')
     f.write('%s 0.0 0.0 0.0\n\n' %sys)
     f.close()
 
@@ -82,7 +82,7 @@ def write_pyfodmc_molecules(sys,con_mat):
     # create system file 
     f = open('system','w')
     f.write('%i %s\n' % (natoms,sys))
-    f.write('angstrom\n')
+    f.write('angstrom fix1s\n')
     for p in range(len(pos)):
         f.write('%s %0.5f %0.5f %0.5f\n' %(sym[p],pos[p][0],pos[p][1],pos[p][2]))
     f.write('cont_mat\n')
