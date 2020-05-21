@@ -8,5 +8,5 @@ setup(
    author_email="kai.trepte1987@gmail.com",
    description="Fermi-orbital descriptor generator",
    packages = setuptools.find_packages(),
-   ext_modules=[Extension(name='fodmc', sources=['fodMC/python/pyfodmc/lib/'], f2py_options=['--quiet'])]
+   ext_modules=[Extension(name='fodmc', sources=['fodMC/lib/'], f2py_options=['--quiet'])]
 )

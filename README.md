@@ -53,7 +53,7 @@ If you want to use e.g. 'fodMC' instead of 'fodMC_motif',
 you need to change the executable name in the run.sh file.
 
 ## Running the code (Python-based GUI)
-Go to the folder *python_GUI*.
+Go to the folder *gui*.
 In the *examples* folder, one can find how to use the graphical user interface (GUI) of the fodMC. 
 
 Thanks goes to Sebastian Schwalbe for developing this GUI.
