@@ -1,4 +1,4 @@
-![GitHub Logo](fodMC/doc/images/logo_fodMC.png)
+![GitHub Logo](doc/images/logo_fodMC.png)
 
 # fodMC - Fermi-orbital descriptor Monte-Carlo 
 
