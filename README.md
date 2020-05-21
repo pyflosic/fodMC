@@ -4,7 +4,7 @@
 
 Main developer:  
 
-*  Kai Trepte (KT, trept1k@cmich.edu)    
+*  Kai Trepte (KT, kai.trepte1987@gmail.com)    
 *  Sebastian Schwalbe (SS, theonov13@gmail.com)  
 
 Sidekicks:  
