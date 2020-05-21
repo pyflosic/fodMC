@@ -5,10 +5,10 @@
 Main developer:  
 
 *  Kai Trepte (KT, trept1k@cmich.edu)    
+*  Sebastian Schwalbe (SS, theonov13@gmail.com)  
 
 Sidekicks:  
-
-* Sebastian Schwalbe (SS, theonov13@gmail.com)    
+  
 * Alex Johnson (AJ, johns1ai@cmich.edu)   
 * Jakob Kraus (JaK, jakob.kraus@physik.tu-freiberg.de)   
 
