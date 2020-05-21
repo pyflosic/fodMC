@@ -1,14 +1,14 @@
-#### run.sh 
+#### run.py 
 
-- bash script for execution of the fodMC
+- python script to execute the fodMC
 
 Usage  
 ``` should work with other shells too
-./run.sh
+python3 run.py
 ```
  
 
-#### system 
+#### system - Geometry and bonding information
 
 - only the first geometry is calculated
 - all other examples after an empty line are ignored
