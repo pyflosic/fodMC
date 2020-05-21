@@ -24,8 +24,8 @@ There is a publication, explaining the underlying idea of this program; please s
 ## Installation (local)
 
 ```bash 
-git clone https://gitlab.com/theonov13/pyflosic_dev.git
-cd pyflosic_dev
+git clone https://github.com/pyflosic/fodMC
+cd fodMC
 pip3 install -e .
 ```
 
