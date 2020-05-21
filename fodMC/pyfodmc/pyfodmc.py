@@ -48,7 +48,7 @@ def get_guess(name='fodMC'):
     os.dup2(outfile, 1)
     # end magic
     # FORTAN call 
-    fodmc.fodmc.get_guess()
+    fodmc.fodmc_mod.get_guess()
     # restore the standard output file descriptor
     os.dup2(save, 1)
     # close the output file

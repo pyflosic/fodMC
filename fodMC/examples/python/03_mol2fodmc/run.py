@@ -1,5 +1,5 @@
-from pyfodmc import pyfodmc
-from pyfodmc.mol2fodmc import mol2fodmc
+from fodMC.pyfodmc import pyfodmc
+from fodMC.pyfodmc.mol2fodmc import mol2fodmc
 import glob 
 import time 
 p = './structures/'
