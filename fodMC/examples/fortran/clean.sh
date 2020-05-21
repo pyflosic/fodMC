@@ -1,3 +1,3 @@
 #!/bin/sh
 
-rm xx_database_xx Nuc_FOD.xyz FRMORB CLUSTER
+rm Nuc_FOD.xyz FRMORB CLUSTER
