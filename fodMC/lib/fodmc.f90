@@ -1,4 +1,4 @@
-module fodmc
+module fodmc_mod
   
 contains
 subroutine get_guess()
@@ -3255,6 +3255,13 @@ end if
 
 return
 end subroutine struct_motif
-end module fodmc
+! End module definition
+end module fodmc_mod
 
 
+
+
+program fodMC
+  USE fodmc_mod
+  call get_guess()
+end program fodMC 
