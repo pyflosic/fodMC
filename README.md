@@ -21,7 +21,6 @@ There is a publication, explaining the underlying idea of this program; please s
 'Interpretation and automatic generation of Fermi-orbital descriptors', S. Schwalbe, K. Trepte, et al., Journal of Computational Chemistry, vol. 40, pp. 2843-2857, 2019
 
 
-## Installation 
 ## Installation (local)
 
 ```bash 
