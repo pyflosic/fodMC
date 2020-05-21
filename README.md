@@ -4,7 +4,7 @@
 
 Main developer:  
 
-*  Kai Trepte (KT, kai.trepte1987@gmail.com)    
+*  Kai Trepte (KT, trept1k@cmich.edu)    
 *  Sebastian Schwalbe (SS, theonov13@gmail.com)  
 
 Sidekicks:  
@@ -23,16 +23,16 @@ There is a publication, explaining the underlying idea of this program; please s
 ## Installation (simple pip) 
 
 ```bash 
-pip3 install fodmc 
+$ pip3 install fodmc 
 ```
 
 
 ## Installation (local)
 
 ```bash 
-git clone https://github.com/pyflosic/fodMC
-cd fodMC
-pip3 install -e .
+$ git clone https://github.com/pyflosic/fodMC
+$ cd fodMC
+$ pip3 install -e .
 ```
 
 The Python module is called 'fodmc'. 
