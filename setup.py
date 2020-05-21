@@ -1,11 +1,12 @@
-from setuptools import setup
+import setuptools
+from numpy.distutils.core import Extension, setup
 
-setup(name='fodMC',
-      version='1.0',
-      description='Fermi-orbital descriptor generator',
-      url='https://github.com/pyflosic/fodMC',
-      author='Kai Trepte',
-      author_email='kai.trepte1987@gmail.com',
-      license='APACHE2.0',
-      packages=['fodMC'],
-      zip_safe=False)
+setup(
+   name="fodMC",
+   version="1.0",
+   author="Kai Trepte",
+   author_email="kai.trepte1987@gmail.com",
+   description="Fermi-orbital descriptor generator",
+   packages = setuptools.find_packages(),
+   ext_modules=[Extension(name='fodmc', sources=['fodMC/python/pyfodmc/lib/'], f2py_options=['--quiet'])]
+)
