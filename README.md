@@ -8,20 +8,22 @@ Main developer:
 
 Sidekicks:  
 
+* Sebastian Schwalbe (SS, theonov13@gmail.com)    
 * Alex Johnson (AJ, johns1ai@cmich.edu)   
 * Jakob Kraus (JaK, jakob.kraus@physik.tu-freiberg.de)   
-* Sebastian Schwalbe (SS, theonov13@gmail.com)    
 
-Coding language: FORTRAN   
+Coding language: FORTRAN, Python 
 
 ## Description
-   
-Guess generator for FOD positions to be used in the Fermi-Löwdin orbital self-interaction correction (FLO-SIC) method.           
-There is a manual, explaining the underlying idea of this program and showing some examples for its usage.
+The fodMC is a generator for Fermi-orbital descriptor (FOD) positions to be used in the Fermi-Löwdin orbital self-interaction correction (FLO-SIC) method.           
+There is a publication, explaining the underlying idea of this program; please see
+
+'Interpretation and automatic generation of Fermi-orbital descriptors', S. Schwalbe, K. Trepte, et al., Journal of Computational Chemistry, vol. 40, pp. 2843-2857, 2019
+
 
 ## Installation 
 The fodMC is written in FORTRAN. Make sure you have a fortran compiler like gfortran to compile the code.  
-To compile the code, go to the *src* directory and type   
+To compile the code, go to the *lib* directory and type   
 
 ```compile
 make
@@ -39,10 +41,9 @@ correct structural motifs for such systems.
 
 
 ## Running the code (in the shell, no GUI) 
+Go to the folders *examples/fortran*. 
 
-Go to the folders *examples*. 
-
-You might want to change the relative directory paths in the run.sh to your absolute src-directory (see manual as well).                                         
+You might want to change the relative directory paths in the run.sh to your absolute src-directory.  
 ```should work with all shells
 ./run.sh
 ```
@@ -52,25 +53,19 @@ If you want to use e.g. 'fodMC' instead of 'fodMC_motif',
 you need to change the executable name in the run.sh file.
 
 ## Running the code (Python-based GUI)
-
-Go to the folder *pyfodMC_GUI*.
+Go to the folder *python_GUI*.
 In the *examples* folder, one can find how to use the graphical user interface (GUI) of the fodMC. 
 
 Thanks goes to Sebastian Schwalbe for developing this GUI.
 
 ## Running the code (Python)
-In the folder *python*, there is a Python-Overlay of the fodMC. 
+In the folder *pyfodMC*, there is a Python-Overlay of the fodMC. 
 
 Thanks goes to Sebastian Schwalbe to develop this.
 
-## Versions
-* The original fodMC code is called *fodMC_alex.f90*. 
-* The next major update was included in *fodMC_motif.f90*, where structural motifs are used for core FODs (instead of using MC to get them).
+## Tutorials
 
-## Manual/Tutorial
-
-There is a manual in the 'doc' folder, called fodMC.pdf. 
-Furthermore, there are several tutorial videos about the 
+There are several tutorial videos about the 
 usage and handling of the fodMC at youtube, 
 at the channel 'The extended Physiker Clan'.
 
