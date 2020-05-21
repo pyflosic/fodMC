@@ -3251,10 +3251,10 @@ end if
 if (n_point_tot == 18) then
   position_point(:) = motif_18(n_point,1:3)*radius + nuc_pos(1:3)
 end if
-
-
 return
 end subroutine struct_motif
+
+
 ! End module definition
 end module fodmc_mod
 
