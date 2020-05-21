@@ -58,6 +58,10 @@ In the *examples* folder, one can find how to use the graphical user interface (
 
 Thanks goes to Sebastian Schwalbe for developing this GUI.
 
+## Running the code (Python)
+In the folder *python*, there is a Python-Overlay of the fodMC. 
+
+Thanks goes to Sebastian Schwalbe to develop this.
 
 ## Versions
 * The original fodMC code is called *fodMC_alex.f90*. 

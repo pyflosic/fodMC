@@ -1,0 +1,5 @@
+LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)
+NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)
+1                            (NUMBER OF ATOMS)
+   0.00000000     0.00000000     0.00000000   36   ALL (R, Z, ALL-ELECTRON)
+ 0.000   0.000                     (NET CHARGE AND NET SPIN)
