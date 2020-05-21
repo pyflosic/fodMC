@@ -22,15 +22,18 @@ There is a publication, explaining the underlying idea of this program; please s
 
 
 ## Installation 
-To install the fodMC as a python module, just do
+## Installation (local)
 
-```get via pip3
-pip3 install fodMC
+```bash 
+git clone https://gitlab.com/theonov13/pyflosic_dev.git
+cd pyflosic_dev
+pip3 install -e .
 ```
 
 The module is called 'fodmc'. 
 
-There are examples to make you familiar with the execution. You can either work at the FORTRAN level (see examples/fortran) or 
+There are examples to make you familiar with the execution. 
+You can either work at the FORTRAN level (see examples/fortran) or 
 use the Python-Overlay, see examples/python.
 
 
