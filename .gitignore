@@ -1,4 +1,3 @@
-*.so 
 *.cube
 *.chk
 *.pyc
@@ -8,5 +7,5 @@
 *.out 
 *.swp
 *.egg-info
-build/ 
+tmp*
 log 
