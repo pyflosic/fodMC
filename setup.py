@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setup(
    name="fodMC",
-   version="1.0.11",
+   version="1.0.12",
    author="Kai Trepte",
    author_email="kai.trepte1987@gmail.com",
    description="Fermi-orbital descriptor Monte-Carlo",
