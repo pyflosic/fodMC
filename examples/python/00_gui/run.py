@@ -1,4 +1,4 @@
-from pygui import * 
+from fodMC.gui.pygui import * 
 #import fodmc 
 
 
