@@ -82,7 +82,10 @@
 - provides better starting points
 - will be published soon
 
-### 05/05/2020       KT
+#### 05/05/2020       KT
 - Introduce pyfodMC_GUI
 - Thanks to Sebastian Schwalbe
 
+#### 26/05/2020       KT
+- Include xx_database_xx into the fortran subroutine
+- No need for the explicit input file
