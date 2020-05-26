@@ -1,7 +1,7 @@
 # PyFODMC - A simple python backend for the fodMC 
 Coding language: python  
 Author: Seabstian Schwalbe  
-Licence: The same as the fodMC, because it is part of it. 
+License: The same as the fodMC, because it is part of it. 
 Status: 15.05.2020 
 
 * compile.sh:   compiling fodmc as libary (changes fodMC_motif.f90 needed)
