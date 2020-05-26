@@ -6,8 +6,9 @@
 #               15.05.2020 
 #               re-included the python interface 
 import fodmc 
+from fodMC.pyfodmc.database import write_database
 from ase.io import read,write  
-import os 
+import os
 
 def get_database(input_file='xx_database_xx'):
     f = open(os.path.dirname(os.path.abspath(__file__))+'/'+input_file,'r') 
@@ -33,7 +34,8 @@ def rename_xyz(name):
 
 def get_guess(name='fodMC'):
     # cp the database to the calculation folder 
-    get_database(input_file='xx_database_xx')
+    #get_database(input_file='xx_database_xx')
+    write_database()
     # magic to capture that output:
     # from http://stackoverflow.com/questions/977840/redirecting-fortran-called-via-f2py-output-in-python
     #      http://websrv.cs.umt.edu/isis/index.php/F2py_example
