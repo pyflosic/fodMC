@@ -29,7 +29,7 @@ S. Schwalbe, K. Trepte, et al.
 Journal of Computational Chemistry, vol. 40, pp. 2843-2857, 2019    
 ```
 
-## Installation (simple pip) 
+## Installation (using pip) 
 
 ```bash 
 $ pip3 install fodmc 
@@ -44,7 +44,7 @@ $ cd fodMC
 $ pip3 install -e .
 ```
 
-The Python module is called 'fodmc'. 
+The Python module is called fodmc. 
 
 There are examples to make you familiar with the execution.    
 You can either work at the FORTRAN level (see examples/fortran) or    
