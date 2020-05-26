@@ -52,7 +52,7 @@ use the Python interface, see examples/python.
 
 
 # ATTENTION
-Initial FODs for transition metals and larger atoms may currently not be reliable.
-This is due to the fact that the spherical symmetry of the core FODs (with is strictly enforced)
-might not represent a good guess for such systems. Intensive research is needed to determine the 
-correct structural motifs for such systems.
+Initial FODs for transition metals and larger atoms may currently not be reliable.       
+This is due to the fact that the spherical symmetry of the core FODs (with is strictly enforced)     
+might not represent a good guess for such systems. Intensive research is needed to determine the     
+correct structural motifs for such systems.     
