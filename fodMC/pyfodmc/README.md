@@ -17,7 +17,7 @@ bash compile.sh
 
 ## How to use 
 Simply execute the pyfodmc.py script in the bash. There are some examples 
-included. (This should be extented in the future.) 
+included. (This should be extended in the future.) 
 
 ```bash 
 python pyfodmc.py
