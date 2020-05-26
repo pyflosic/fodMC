@@ -115,8 +115,9 @@ class pygui_utils(HasTraits):
             os.dup2(outfile, 1)
             # end magic 
             
-            # Fortran call  
-            fodmc.fodmc.points_on_sphere_metropolis_spin_centers()
+            # Fortran call
+            fodmc.fodmc_mod.get_guess()
+#            fodmc.fodmc.points_on_sphere_metropolis_spin_centers()
             #
             
             # restore the standard output file descriptor
