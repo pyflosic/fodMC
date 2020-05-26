@@ -98,7 +98,7 @@ if __name__ == "__main__":
         # creat input 
         write_pyfodmc_atoms(sys='Kr')
         # Fortran call 
-        fodmc.fodmc.get_guess()
+        fodmc.fodmc_mod.get_guess()
     
     def make_molecule():
         # Simple test for molecule
@@ -106,5 +106,5 @@ if __name__ == "__main__":
         con_mat = ['(1-2)-(2-2)','(1-3)-(2-2)\n']   
         write_pyfodmc_molecules(sys=sys,con_mat=con_mat)
         # Fortran call 
-        fodmc.fodmc.get_guess()
+        fodmc.fodmc_mod.get_guess()
     make_atom()
