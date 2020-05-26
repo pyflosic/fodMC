@@ -65,6 +65,8 @@ subroutine get_guess()
 ! Introduce structural motifs. Use these for atoms and core FODs. Thus, no distribution of 
 ! points on a sphere necessary for such FODs.
 ! Further, a Metropolis-like algorithm is now used for the rotation of core vs. valence FODs.
+! 22. May 2020
+! Incorporate xx_database_xx into this file as a subroutine.
 
 implicit none
 ! new array structure: 3 real     (coordinates of center)
@@ -140,6 +142,10 @@ real(8)              :: tmp_vector(3)                         ! tmeporary vector
 real(8)              :: perpendicular_vec(3)                  ! vector perpedicular to the bond vector
 integer, allocatable :: bond_count_up(:)                      ! counting the number of bonds already assumed by an atom -> assign valence properly. 
 integer, allocatable :: bond_count_dn(:)                      ! counting the number of bonds already assumed by an atom -> assign valence properly.
+real(8), allocatable :: r_tmp_up(:)                           ! temporary arrays to store radii of all shells from the database
+real(8), allocatable :: r_tmp_dn(:)
+integer, allocatable :: N_tmp_up(:)                           ! temporary arrays to store number of all shells from the database
+integer, allocatable :: N_tmp_dn(:)
 ! Used for Metropolis
 real(8)              :: rand_metro                            ! random number for optimization with metropolis algorithm 
 
@@ -225,81 +231,81 @@ end if
 ! if n = 1 -> read from xx_database_xx.  !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 if (number_of_centers == 1) then
-  open(18,file='xx_database_xx',status='old',action='read')
-  a = 1                                                                        ! index for the atoms. 1 in this case
-  t = 0                                                                        ! counter to abort the next while loop if all required data is read in
-  do while (t < 1)
-    read(18,*) junk
-    if (junk == pos1_up(a)%elements) then                                      ! if the element is found -> read in data
-      backspace(18)                                                            ! go up one line
-      read(18,*) junk, element_number(a), pseudo_charge(a), core_charge(a)     ! read in the element number, pseudo and core charge
-      read(18,*) pos1_up(a)%n_shells, pos1_dn(a)%n_shells                      ! read in the number of shells, for spin up and spin down
-     
-      pos2_up(a)%n_shells = pos1_up(a)%n_shells                                ! define the number of shells for the second arrays
-      pos2_dn(a)%n_shells = pos1_dn(a)%n_shells                                ! 
+  allocate(covalent_R(number_of_centers))
+  a = 1                                                                         ! index for the atoms. 1 in this case
 
-      allocate(pos1_up(a)%n_points(pos1_up(a)%n_shells))
-      allocate(pos1_dn(a)%n_points(pos1_dn(a)%n_shells))
-      allocate(pos2_up(a)%n_points(pos2_up(a)%n_shells))
-      allocate(pos2_dn(a)%n_points(pos2_dn(a)%n_shells))
+  ! Temporary array to store number of shells and radii for all shells. 
+  ! Later, they will be transfered into the corresponding arrays
+  ! 10 ... there is no element with that many shells. So this is just a temporary number
+  allocate(r_tmp_up(10))
+  allocate(r_tmp_dn(10))
+  allocate(N_tmp_up(10))
+  allocate(N_tmp_dn(10))
+  r_tmp_up(:) = 0.0D0
+  r_tmp_dn(:) = 0.0D0
+  N_tmp_up(:) = 0.0D0
+  N_tmp_dn(:) = 0.0D0
 
-      ! store number of points for the different shells
-      do b = 1, pos1_up(a)%n_shells                                            ! store the number of points for all shells, spin UP
-        read(18,*) junk, pos1_up(a)%n_points(b)
-        pos2_up(a)%n_points(b) = pos1_up(a)%n_points(b)
-      end do
-      do b = 1, pos1_dn(a)%n_shells                                            ! store the number of points for all shells, spin DN
-        read(18,*) junk, pos1_dn(a)%n_points(b)
-        pos2_dn(a)%n_points(b) = pos1_dn(a)%n_points(b)
-      end do
+  call database(pos1_up(a)%elements,element_number(a),pseudo_charge(a), &  ! get all initial data
+                core_charge(a), covalent_R(a), &
+                pos1_up(a)%n_shells, pos1_dn(a)%n_shells, &
+                N_tmp_up,N_tmp_dn,r_tmp_up,r_tmp_dn)
 
-      ! allocate all needed arrays
-      allocate(pos1_up(a)%r_theta_phi(pos1_up(a)%n_shells,sum(pos1_up(a)%n_points(:)),3))
-      allocate(pos2_up(a)%r_theta_phi(pos2_up(a)%n_shells,sum(pos2_up(a)%n_points(:)),3))
-      allocate(pos1_dn(a)%r_theta_phi(pos1_dn(a)%n_shells,sum(pos1_dn(a)%n_points(:)),3))
-      allocate(pos2_dn(a)%r_theta_phi(pos2_dn(a)%n_shells,sum(pos2_dn(a)%n_points(:)),3))
-      allocate(pos1_up(a)%point_x_y_z(pos1_up(a)%n_shells,sum(pos1_up(a)%n_points(:)),3))
-      allocate(pos2_up(a)%point_x_y_z(pos2_up(a)%n_shells,sum(pos2_up(a)%n_points(:)),3))
-      allocate(pos1_dn(a)%point_x_y_z(pos1_dn(a)%n_shells,sum(pos1_dn(a)%n_points(:)),3))
-      allocate(pos2_dn(a)%point_x_y_z(pos2_dn(a)%n_shells,sum(pos2_dn(a)%n_points(:)),3))
+  pos2_up(a)%n_shells = pos1_up(a)%n_shells                                ! define the number of shells for the second arrays
+  pos2_dn(a)%n_shells = pos1_dn(a)%n_shells                                ! 
+  allocate(pos1_up(a)%n_points(pos1_up(a)%n_shells))
+  allocate(pos1_dn(a)%n_points(pos1_dn(a)%n_shells))
+  allocate(pos2_up(a)%n_points(pos2_up(a)%n_shells))
+  allocate(pos2_dn(a)%n_points(pos2_dn(a)%n_shells))
 
-      ! go back to the first entry
-      do b = 1, pos1_up(a)%n_shells+pos1_dn(a)%n_shells
-        backspace(18)
-      end do
-
-      ! store the radii of for the different shells 
-      ! INITIALIZE THE POINTS !
-      do b = 1, pos1_up(a)%n_shells
-        read(18,*) pos1_up(a)%r_theta_phi(b,1,1)
-        pos1_up(a)%r_theta_phi(b,1,1) = pos1_up(a)%r_theta_phi(b,1,1)*units_factor   ! convert the radius to the correct units
-        do c = 1, pos1_up(a)%n_points(b)                                             ! store all other values for this shell accordingly. Add theta and phi.
-          pos1_up(a)%r_theta_phi(b,c,1:3) = (/ pos1_up(a)%r_theta_phi(b,1,1), real(pi/2.0,8), real(0.0,8) /)
-          pos2_up(a)%r_theta_phi(b,c,1:3) = pos1_up(a)%r_theta_phi(b,c,1:3)
-          pos1_up(a)%point_x_y_z(b,c,1:3) = (/ pos1_up(a)%r_theta_phi(b,1,1) + pos1_up(a)%center_x_y_z(1), &
-                                             & pos1_up(a)%center_x_y_z(2),     pos1_up(a)%center_x_y_z(3) /)
-          pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
-        end do
-      end do
-      do b = 1, pos1_dn(a)%n_shells
-        read(18,*) pos1_dn(a)%r_theta_phi(b,1,1)
-        pos1_dn(a)%r_theta_phi(b,1,1) = pos1_dn(a)%r_theta_phi(b,1,1)*units_factor   ! convert the radius to the correct units
-        do c = 1, pos1_dn(a)%n_points(b)                                             ! store all other values for this shell accordingly. Add theta and phi.
-          pos1_dn(a)%r_theta_phi(b,c,1:3) = (/ pos1_dn(a)%r_theta_phi(b,1,1), real(pi/2.0,8), real(0.0,8) /)
-          pos2_dn(a)%r_theta_phi(b,c,1:3) = pos1_dn(a)%r_theta_phi(b,c,1:3)
-          pos1_dn(a)%point_x_y_z(b,c,1:3) = (/ pos1_dn(a)%r_theta_phi(b,1,1) + pos1_dn(a)%center_x_y_z(1), &
-                                             & pos1_dn(a)%center_x_y_z(2),     pos1_dn(a)%center_x_y_z(3) /)
-          pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
-        end do
-      end do
-      t = t + 1                                                                ! once everything is done, terminate the while loop
-    end if
+  ! store number of points for the different shells
+  do b = 1, pos1_up(a)%n_shells                                            ! store the number of points for all shells, spin UP
+    pos1_up(a)%n_points(b) = N_tmp_up(b)
+    pos2_up(a)%n_points(b) = pos1_up(a)%n_points(b)
+  end do
+  do b = 1, pos1_dn(a)%n_shells                                            ! store the number of points for all shells, spin DN
+    pos1_dn(a)%n_points(b) = N_tmp_dn(b)
+    pos2_dn(a)%n_points(b) = pos1_dn(a)%n_points(b)
   end do
 
-!
-! Put all 1s core FODs (index (1,1,1:3)) at the origin
-!
-  if (fix1s) then
+  ! allocate all needed arrays
+  allocate(pos1_up(a)%r_theta_phi(pos1_up(a)%n_shells,sum(pos1_up(a)%n_points(:)),3))
+  allocate(pos2_up(a)%r_theta_phi(pos2_up(a)%n_shells,sum(pos2_up(a)%n_points(:)),3))
+  allocate(pos1_dn(a)%r_theta_phi(pos1_dn(a)%n_shells,sum(pos1_dn(a)%n_points(:)),3))
+  allocate(pos2_dn(a)%r_theta_phi(pos2_dn(a)%n_shells,sum(pos2_dn(a)%n_points(:)),3))
+  allocate(pos1_up(a)%point_x_y_z(pos1_up(a)%n_shells,sum(pos1_up(a)%n_points(:)),3))
+  allocate(pos2_up(a)%point_x_y_z(pos2_up(a)%n_shells,sum(pos2_up(a)%n_points(:)),3))
+  allocate(pos1_dn(a)%point_x_y_z(pos1_dn(a)%n_shells,sum(pos1_dn(a)%n_points(:)),3))
+  allocate(pos2_dn(a)%point_x_y_z(pos2_dn(a)%n_shells,sum(pos2_dn(a)%n_points(:)),3))
+
+  ! store the radii of for the different shells 
+  ! INITIALIZE THE POINTS !
+  do b = 1, pos1_up(a)%n_shells
+    pos1_up(a)%r_theta_phi(b,1,1) = r_tmp_up(b)*units_factor    ! convert to correct units
+  
+    do c = 1, pos1_up(a)%n_points(b)                            ! store all other values for this shell accordingly. Add theta and phi.
+      pos1_up(a)%r_theta_phi(b,c,1:3) = (/ pos1_up(a)%r_theta_phi(b,1,1), real(pi/2.0,8), real(0.0,8) /)
+      pos2_up(a)%r_theta_phi(b,c,1:3) = pos1_up(a)%r_theta_phi(b,c,1:3)
+      pos1_up(a)%point_x_y_z(b,c,1:3) = (/ pos1_up(a)%r_theta_phi(b,1,1) + pos1_up(a)%center_x_y_z(1), &
+                                         & pos1_up(a)%center_x_y_z(2),     pos1_up(a)%center_x_y_z(3) /)
+      pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
+    end do
+  end do
+  do b = 1, pos1_dn(a)%n_shells
+    pos1_dn(a)%r_theta_phi(b,1,1) = r_tmp_dn(b)*units_factor    ! convert to correct units
+    do c = 1, pos1_dn(a)%n_points(b)                                             ! store all other values for this shell accordingly. Add theta and phi.
+      pos1_dn(a)%r_theta_phi(b,c,1:3) = (/ pos1_dn(a)%r_theta_phi(b,1,1), real(pi/2.0,8), real(0.0,8) /)
+      pos2_dn(a)%r_theta_phi(b,c,1:3) = pos1_dn(a)%r_theta_phi(b,c,1:3)
+      pos1_dn(a)%point_x_y_z(b,c,1:3) = (/ pos1_dn(a)%r_theta_phi(b,1,1) + pos1_dn(a)%center_x_y_z(1), &
+                                         & pos1_dn(a)%center_x_y_z(2),     pos1_dn(a)%center_x_y_z(3) /)
+      pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
+    end do
+  end do
+  !
+  ! Put all 1s core FODs (index (1,1,1:3)) at the origin
+  ! If NOT pseudopotential
+  !
+  if ((fix1s).and.(pos1_up(a)%elements(3:5).ne.'ECP').and.(pos1_up(a)%elements(4:6).ne.'ECP')) then
     pos1_up(a)%r_theta_phi(1,1,1:3) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /) 
     pos1_up(a)%point_x_y_z(1,1,1:3) = pos1_up(a)%center_x_y_z(1:3)
     pos2_up(a)%r_theta_phi(1,1,1:3) = pos1_up(a)%r_theta_phi(1,1,1:3)
@@ -310,6 +316,11 @@ if (number_of_centers == 1) then
     pos2_dn(a)%point_x_y_z(1,1,1:3) = pos1_dn(a)%point_x_y_z(1,1,1:3)
   end if
 
+  ! Deallocate temporary arrays
+  deallocate(r_tmp_up)
+  deallocate(r_tmp_dn)
+  deallocate(N_tmp_up)
+  deallocate(N_tmp_dn)
 
 
 
@@ -317,7 +328,8 @@ if (number_of_centers == 1) then
 ! FOR MOLECULES -> read core radii from xx_database_xx, rest from system !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 else
-! create connectivity matrix from bond pattern. Like (1-2)-(2-2) (1-4)-(1-1) (3-4)-(3-2)   ! atom 1 binds to atom 2 with 2-UP and 2DN FODS, 1 to atom 4 with 1-UP and 1-DN FOD and atom 3 to atom 4 with 3-UP and 2-DN FODs
+! create connectivity matrix from bond pattern. Like (1-2)-(2-2) (1-4)-(1-1) (3-4)-(3-2)   
+! atom 1 binds to atom 2 with 2-UP and 2DN FODS, 1 to atom 4 with 1-UP and 1-DN FOD and atom 3 to atom 4 with 3-UP and 2-DN FODs
 ! initialize con_mat and lone_fods with 0 everywhere                                       ! lone FODs will be initialized later
   allocate(con_mat(number_of_centers,number_of_centers))
   allocate(lone_fods(number_of_centers,2))
@@ -335,25 +347,48 @@ else
   !
   ! Read number of shells for all atoms
   !
-  open(18,file='xx_database_xx',status='old',action='read')
   do a = 1, number_of_centers
-    t = 0
-    do while (t < 1)
-      read(18,*) junk
-      if (junk == pos1_up(a)%elements) then                                    ! if the element is found -> read number of shells first 
-        backspace(18)                                                          ! go up one line
-        read(18,*) junk, element_number(a), pseudo_charge(a), core_charge(a), covalent_R(a)    ! read in the element number, pseudo and core charge and the covalent radius
-        read(18,*) pos1_up(a)%n_shells, pos1_dn(a)%n_shells                    ! number of shells, for spin up and spin down
-        pos2_up(a)%n_shells = pos1_up(a)%n_shells                              ! define the number of shells for the other arrays
-        pos2_dn(a)%n_shells = pos1_dn(a)%n_shells                              !
-        allocate(pos1_up(a)%n_points(pos1_up(a)%n_shells))
-        allocate(pos1_dn(a)%n_points(pos1_dn(a)%n_shells))
-        allocate(pos2_up(a)%n_points(pos2_up(a)%n_shells))
-        allocate(pos2_dn(a)%n_points(pos2_dn(a)%n_shells))
-        t = t + 1                                                              ! terminate while loop
-      end if
+    !
+    ! Temporary array to store number of shells and radii for all shells. 
+    ! Later, they will be transfered into the corresponding arrays
+    ! 10 ... there is no element with that many shells. So this is just a temporary number
+    !
+    allocate(r_tmp_up(10))
+    allocate(r_tmp_dn(10))
+    allocate(N_tmp_up(10))
+    allocate(N_tmp_dn(10))
+    r_tmp_up(:) = 0.0D0
+    r_tmp_dn(:) = 0.0D0
+    N_tmp_up(:) = 0.0D0
+    N_tmp_dn(:) = 0.0D0
+
+    call database(pos1_up(a)%elements,element_number(a),pseudo_charge(a), &  ! get all initial data
+                  core_charge(a), covalent_R(a), &
+                  pos1_up(a)%n_shells, pos1_dn(a)%n_shells, &
+                  N_tmp_up,N_tmp_dn,r_tmp_up,r_tmp_dn)
+
+    pos2_up(a)%n_shells = pos1_up(a)%n_shells                                ! define the number of shells for the second arrays
+    pos2_dn(a)%n_shells = pos1_dn(a)%n_shells                                ! 
+    allocate(pos1_up(a)%n_points(pos1_up(a)%n_shells))
+    allocate(pos1_dn(a)%n_points(pos1_dn(a)%n_shells))
+    allocate(pos2_up(a)%n_points(pos2_up(a)%n_shells))
+    allocate(pos2_dn(a)%n_points(pos2_dn(a)%n_shells))
+
+    ! store number of points for the different shells
+    do b = 1, pos1_up(a)%n_shells                                            ! store the number of points for all shells, spin UP
+      pos1_up(a)%n_points(b) = N_tmp_up(b)
+      pos2_up(a)%n_points(b) = pos1_up(a)%n_points(b)
     end do
-    rewind(18)
+    do b = 1, pos1_dn(a)%n_shells                                            ! store the number of points for all shells, spin DN
+      pos1_dn(a)%n_points(b) = N_tmp_dn(b)
+      pos2_dn(a)%n_points(b) = pos1_dn(a)%n_points(b)
+    end do
+
+    ! Deallocate temporary arrays
+    deallocate(r_tmp_up)
+    deallocate(r_tmp_dn)
+    deallocate(N_tmp_up)
+    deallocate(N_tmp_dn)
   end do
   !
   ! For bonds : simply add one FOD for all bonds. I.e. all bonds are initialized with single bonds
@@ -423,7 +458,6 @@ else
       end if
     end do
   end do
-
   !
   ! CONSTRUCT CON_MAT AND LONE_FODS
   !
@@ -466,29 +500,29 @@ else
       end if
     end do
   end do
-
-
-! Construct lone FODs from bond information and nuclear charge. 
-! Take into account all core charges 
-! ATTENTION: This assumes charge neutrality per atom.
-!
-! Compute core charges
-! Get nuclear charge
-! Get total number of bond FODs in the bond to the atom
-! Assumption: half of these bond FODs are from this atom 
-! Thus, if nuclear_charge - core_charge - 1/2*bond_FODs != 0  -> add number of lone FODs
-! Number of lone FODs = (nuclear_charge - core_charge - 1/2*bond_FODs)/2. For UP and DN. If odd number, add more UP FODs
-
+  !
+  ! Construct lone FODs from bond information and nuclear charge. 
+  ! Take into account all core charges 
+  ! ATTENTION: This assumes charge neutrality per atom.
+  !
+  ! Compute core charges
+  ! Get nuclear charge
+  ! Get total number of bond FODs in the bond to the atom
+  ! Assumption: half of these bond FODs are from this atom 
+  ! Thus, if nuclear_charge - core_charge - 1/2*bond_FODs != 0  -> add number of lone FODs
+  ! Number of lone FODs = (nuclear_charge - core_charge - 1/2*bond_FODs)/2. For UP and DN. If odd number, add more UP FODs
+  !
   do b = 1, number_of_centers                                                   ! do for all atoms
     if (((sum(con_mat(b,:)) + sum(con_mat(:,b)))/2.0D0 + core_charge(b)) < element_number(b)) then
       lone_fods(b,1) = ceiling((element_number(b)-core_charge(b)-(sum(con_mat(b,:))+sum(con_mat(:,b)))/2.0D0)/2.0D0)            ! UP lone FODs. If uneven number of UP and DN -> give it more UP
       lone_fods(b,2) =   floor((element_number(b)-core_charge(b)-(sum(con_mat(b,:))+sum(con_mat(:,b)))/2.0D0)/2.0D0)            ! DN lone FODs. If uneven number of UP and DN -> give it more UP
     end if
   end do
-
-! GET THE REST OF THE LONE FODs. User input!
-! Idea: have a pattern like 1-(1-1), meaning that atom 1 has 1 UP and 1 DN lone FOD
-! Read lone FODs per center. 
+  !
+  ! GET THE REST OF THE LONE FODs. User input!
+  ! Idea: have a pattern like 1-(1-1), meaning that atom 1 has 1 UP and 1 DN lone FOD
+  ! Read lone FODs per center. 
+  !
   loop8: do b = 1, number_of_centers                                            ! do for all atoms
     read(17,fmt='(A)') bla2                                                     ! read lone FOD pattern
     if (len_trim(bla2) == 0) then                                               ! if the string has 0 length -> empty space of input -> END of input
@@ -510,7 +544,6 @@ else
       end do loop9
     end if
   end do loop8
-
   !
   ! OUTPUT ON SCREEN
   !
@@ -548,33 +581,7 @@ else
   !
   ! END OUTPUT
   !
-
-  !
-  ! Go through all atoms and store number of points
-  !
   do a = 1, number_of_centers
-    t = 0
-    do while (t < 1)
-      read(18,*) junk
-      if (junk == pos1_up(a)%elements) then                                    ! if the element is found -> read radii
-        read(18,*) 
-        do b = 1, pos1_up(a)%n_shells                                          ! store the number of points for all shells, spin UP
-          read(18,*) junk, pos1_up(a)%n_points(b)
-          pos2_up(a)%n_points(b) = pos1_up(a)%n_points(b)
-        end do
-        do b = 1, pos1_dn(a)%n_shells                                          ! store the number of points for all shells, spin DN
-          read(18,*) junk, pos1_dn(a)%n_points(b)
-          pos2_dn(a)%n_points(b) = pos1_dn(a)%n_points(b)
-        end do
-        t = t + 1                                                              ! terminate while loop
-      end if
-    end do
-    !
-    ! go back to the first entry in order to read the radii
-    !
-    do b = 1, pos1_up(a)%n_shells+pos1_dn(a)%n_shells
-      backspace(18)
-    end do
     !
     ! Get number of valence FODs from con_mat and lone_fods 
     ! UP CHANNEL
@@ -601,6 +608,25 @@ else
     pos1_dn(a)%n_points(pos1_dn(a)%n_shells) = pos1_dn(a)%n_points(pos1_dn(a)%n_shells) + lone_fods(a,2)
     pos2_dn(a)%n_points(pos1_dn(a)%n_shells) = pos1_dn(a)%n_points(pos1_dn(a)%n_shells)
     !
+    ! Temporary array to store number of shells and radii for all shells. 
+    ! 10 ... there is no element with that many shells. So this is just a temporary number.
+    ! Use these radii later on
+    !
+    allocate(r_tmp_up(10))
+    allocate(r_tmp_dn(10))
+    allocate(N_tmp_up(10))
+    allocate(N_tmp_dn(10))
+    r_tmp_up(:) = 0.0D0
+    r_tmp_dn(:) = 0.0D0
+    N_tmp_up(:) = 0.0D0
+    N_tmp_dn(:) = 0.0D0
+
+    call database(pos1_up(a)%elements,element_number(a),pseudo_charge(a), &  ! get all initial data
+                  core_charge(a), covalent_R(a), &
+                  pos1_up(a)%n_shells, pos1_dn(a)%n_shells, &
+                  N_tmp_up,N_tmp_dn,r_tmp_up,r_tmp_dn)
+
+    !
     ! allocate radii, theta, phi and xyz for the FODs
     !
     allocate(pos1_up(a)%r_theta_phi(pos1_up(a)%n_shells,sum(pos1_up(a)%n_points(:)),3))
@@ -613,10 +639,9 @@ else
     allocate(pos2_dn(a)%point_x_y_z(pos2_dn(a)%n_shells,sum(pos2_dn(a)%n_points(:)),3))
     !
     ! store the radii of for the different shells 
-    ! INITIALIZE THE POINTS ! Here for core FODs
+    ! INITIALIZE THE POINTS ! Here for core FODs 
     do b = 1, pos1_up(a)%n_shells-1
-      read(18,*) pos1_up(a)%r_theta_phi(b,1,1)
-      pos1_up(a)%r_theta_phi(b,1,1) = pos1_up(a)%r_theta_phi(b,1,1)*units_factor   ! convert the radius to the correct units
+      pos1_up(a)%r_theta_phi(b,1,1) = r_tmp_up(b)*units_factor   ! convert the radius to the correct units
       do c = 1, pos1_up(a)%n_points(b)                                             ! store all other values for this shell accordingly. Add theta and phi.
         pos1_up(a)%r_theta_phi(b,c,1:3) = (/ pos1_up(a)%r_theta_phi(b,1,1), real(pi/2.0,8), real(0.0,8) /)
         pos2_up(a)%r_theta_phi(b,c,1:3) = pos1_up(a)%r_theta_phi(b,c,1:3)
@@ -625,10 +650,8 @@ else
         pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
       end do
     end do
-    read(18,*)                                                                     ! ignore the valence value here
     do b = 1, pos1_dn(a)%n_shells-1
-      read(18,*) pos1_dn(a)%r_theta_phi(b,1,1)
-      pos1_dn(a)%r_theta_phi(b,1,1) = pos1_dn(a)%r_theta_phi(b,1,1)*units_factor   ! convert the radius to the correct units
+      pos1_dn(a)%r_theta_phi(b,1,1) = r_tmp_dn(b)*units_factor   ! convert the radius to the correct units
       do c = 1, pos1_dn(a)%n_points(b)                                             ! store all other values for this shell accordingly. Add theta and phi.
         pos1_dn(a)%r_theta_phi(b,c,1:3) = (/ pos1_dn(a)%r_theta_phi(b,1,1), real(pi/2.0,8), real(0.0,8) /)
         pos2_dn(a)%r_theta_phi(b,c,1:3) = pos1_dn(a)%r_theta_phi(b,c,1:3)
@@ -637,54 +660,34 @@ else
         pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
       end do
     end do
-  rewind(18)                                                                        ! go back to the top of the database file. Read it out for the next atom
-  end do
-  ! 
-  ! get valence FOD radii. Here for non-bonded atoms. Use xx_database_xx file and use the atomic radii
-  !
-  do a = 1, number_of_centers
+    ! 
+    ! get valence FOD radii. Here for non-bonded atoms. Use radii from database (r_tmp)
+    !
     if (sum(con_mat(a,:)) == 0) then                                           ! No bonds
-      t = 0
-      do while (t < 1)
-        read(18,*) junk
-        if (junk == pos1_up(a)%elements) then                                  ! if the element is found -> read radii and number of points
-          read(18,*)                                                           ! ignore the number of shells now
-          ! UP CHANNEL
-          b = pos1_up(a)%n_shells                                              ! store the different radii and number of points in arrays. ONLY VALENCE
-          do c = 1, b-1
-            read(18,*)                                                         ! skip the radii for the core FODs
-          end do
-          read(18,*) pos1_up(a)%r_theta_phi(b,1,1)
-          pos1_up(a)%r_theta_phi(b,1,1) = pos1_up(a)%r_theta_phi(b,1,1)*units_factor   ! convert the radius to the correct units
-          do c = 1, pos1_up(a)%n_points(b)                                             ! initialize all lone_fods as specified in the system file.  pos1_up(a)%n_points(b) = lone_fods(a,1)
-            pos1_up(a)%r_theta_phi(b,c,1:3) = (/ pos1_up(a)%r_theta_phi(b,1,1), real(pi/2.0,8), real(0.0,8) /)
-            pos2_up(a)%r_theta_phi(b,c,1:3) = pos1_up(a)%r_theta_phi(b,c,1:3)
-            pos1_up(a)%point_x_y_z(b,c,1:3) = (/ pos1_up(a)%r_theta_phi(b,1,1) + pos1_up(a)%center_x_y_z(1), &
-                                               & pos1_up(a)%center_x_y_z(2),     pos1_up(a)%center_x_y_z(3) /)
-            pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
-          end do
-
-          ! DN CHANNEL
-          b = pos1_dn(a)%n_shells                                              ! store the different radii and number of points in arrays
-          do c = 1, b-1
-            read(18,*)                                                         ! skip the radii for the core FODs
-          end do
-          read(18,*) pos1_dn(a)%r_theta_phi(b,1,1)
-          pos1_dn(a)%r_theta_phi(b,1,1) = pos1_dn(a)%r_theta_phi(b,1,1)*units_factor   ! convert the radius to the correct units
-          do c = 1, pos1_dn(a)%n_points(b)                                             ! initialize all lone_fods as specified in the system file.  pos1_dn(a)%n_points(b) = lone_fods(a,2)
-            pos1_dn(a)%r_theta_phi(b,c,1:3) = (/ pos1_dn(a)%r_theta_phi(b,1,1), real(pi/2.0,8), real(0.0,8) /)
-            pos2_dn(a)%r_theta_phi(b,c,1:3) = pos1_dn(a)%r_theta_phi(b,c,1:3)
-            pos1_dn(a)%point_x_y_z(b,c,1:3) = (/ pos1_dn(a)%r_theta_phi(b,1,1) + pos1_dn(a)%center_x_y_z(1), &
-                                               & pos1_dn(a)%center_x_y_z(2),     pos1_dn(a)%center_x_y_z(3) /)
-            pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
-          end do
-          t = t + 1                                                            ! terminate while loop
-        end if
+      ! UP Channel
+      b = pos1_up(a)%n_shells                                              ! store the different radii and number of points in arrays. ONLY VALENCE
+      pos1_up(a)%r_theta_phi(b,1,1) = r_tmp_up(b)*units_factor   ! convert the radius to the correct units
+      do c = 1, pos1_up(a)%n_points(b)                                             ! initialize all lone_fods as specified in the system file.  pos1_up(a)%n_points(b) = lone_fods(a,1)
+        pos1_up(a)%r_theta_phi(b,c,1:3) = (/ pos1_up(a)%r_theta_phi(b,1,1), real(pi/2.0,8), real(0.0,8) /)
+        pos2_up(a)%r_theta_phi(b,c,1:3) = pos1_up(a)%r_theta_phi(b,c,1:3)
+        pos1_up(a)%point_x_y_z(b,c,1:3) = (/ pos1_up(a)%r_theta_phi(b,1,1) + pos1_up(a)%center_x_y_z(1), &
+                                           & pos1_up(a)%center_x_y_z(2),     pos1_up(a)%center_x_y_z(3) /)
+        pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
       end do
-      rewind(18)                                                               ! go back to the top of the database to read the next element
+      ! DN Channel
+      b = pos1_dn(a)%n_shells                                              ! store the different radii and number of points in arrays
+      pos1_dn(a)%r_theta_phi(b,1,1) = r_tmp_dn(b)*units_factor   ! convert the radius to the correct units
+      do c = 1, pos1_dn(a)%n_points(b)                                             ! initialize all lone_fods as specified in the system file.  pos1_dn(a)%n_points(b) = lone_fods(a,2)
+        pos1_dn(a)%r_theta_phi(b,c,1:3) = (/ pos1_dn(a)%r_theta_phi(b,1,1), real(pi/2.0,8), real(0.0,8) /)
+        pos2_dn(a)%r_theta_phi(b,c,1:3) = pos1_dn(a)%r_theta_phi(b,c,1:3)
+        pos1_dn(a)%point_x_y_z(b,c,1:3) = (/ pos1_dn(a)%r_theta_phi(b,1,1) + pos1_dn(a)%center_x_y_z(1), &
+                                           & pos1_dn(a)%center_x_y_z(2),     pos1_dn(a)%center_x_y_z(3) /)
+        pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
+      end do
     !
     ! For bonded atoms: get valence FOD radii from molecular geometry. Evaluate distances to adjacent atoms
     ! use distance between atoms as radii. Only relevant for lone FODs
+    !
     else
       d_bond = 10.0
       do b = 1, number_of_centers
@@ -733,13 +736,19 @@ else
         pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
       end do
     end if
-  end do
 
-!
-! Put all 1s core FODs (index (1,1,1:3)) at the origin
-!
-  if (fix1s) then
-    do a = 1, number_of_centers 
+    ! Deallocate temporary arrays
+    deallocate(r_tmp_up)
+    deallocate(r_tmp_dn)
+    deallocate(N_tmp_up)
+    deallocate(N_tmp_dn)
+  end do
+  !
+  ! Put all 1s core FODs (index (1,1,1:3)) at the origin
+  ! If NOT pseudopotential
+  !
+  do a = 1, number_of_centers 
+    if ((fix1s).and.(pos1_up(a)%elements(3:5).ne.'ECP').and.(pos1_up(a)%elements(4:6).ne.'ECP')) then
       pos1_up(a)%r_theta_phi(1,1,1:3) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
       pos1_up(a)%point_x_y_z(1,1,1:3) = pos1_up(a)%center_x_y_z(1:3)
       pos2_up(a)%r_theta_phi(1,1,1:3) = pos1_up(a)%r_theta_phi(1,1,1:3)
@@ -748,9 +757,9 @@ else
       pos1_dn(a)%point_x_y_z(1,1,1:3) = pos1_dn(a)%center_x_y_z(1:3)
       pos2_dn(a)%r_theta_phi(1,1,1:3) = pos1_dn(a)%r_theta_phi(1,1,1:3)
       pos2_dn(a)%point_x_y_z(1,1,1:3) = pos1_dn(a)%point_x_y_z(1,1,1:3)
-    end do
-  end if
-
+    end if
+  end do
+! End if: whether there is only one atom, or more
 end if
 
 !!!!!!!!!!!!!!!!!!!
@@ -2743,6 +2752,1942 @@ end do
 
 !end program fodMC
 end subroutine get_guess
+
+
+subroutine database(species,elem,Qpseudo,Qcore,Rcov,shellUP,shellDN,N_UP,N_DN,R_UP,R_DN)
+        ! element_number
+        ! pseudo_charge 
+        ! core_charge
+        ! covalent radius
+        ! shells_up, shells_dn
+        !  Temporary arrays. To be written correctly later on
+        ! points per shell UP and DN
+        ! Radii for each shell UP and DN
+!###########################################
+! All average radii for the atoms (in bohr). 
+! Structured as follows:
+! 
+! Element_symbol        Element_number          Pseudo_potential_electrons      No_of_core_electrons            Covalent_radius         Comment
+! number_of_UP_shells   number_of_DN_shells     always at least 1. The number of points on this shell can be zero (if one spin channel shall be neglected)
+! radius_UP_1           number_of_points_UP_1
+! radius_UP_2           number_of_points_UP_2
+! ....
+! radius_DN_1           number_of_points_DN_1
+! ...
+character(len=17), intent(in)  :: species
+integer, intent(inout)         :: elem, Qpseudo, Qcore, shellUP, shellDN, N_UP(10), N_DN(10)
+real(8), intent(inout)         :: Rcov, R_UP(10), R_DN(10)
+
+! All-electron, large core pseudopotentials (ECP_LC), or small core pseudopotentials (ECP_SC)
+! Hydrogen
+if ((species == 'H').or.(species == 'H_ECP_LC').or.(species == 'H_ECP_SC')) then
+  elem    = 1
+  Qpseudo = 0
+  Qcore   = 0
+  Rcov    = 0.605D0
+  shellUP = 1
+  shellDN = 1
+  N_UP(1) = 1
+  R_UP(1) = 0.300D0
+  N_DN(1) = 0
+  R_DN(1) = 0.300D0
+! Helium
+else if ((species == 'He').or.(species == 'He_ECP_LC').or.(species == 'He_ECP_SC')) then
+  elem    = 2
+  Qpseudo = 0
+  Qcore   = 0
+  Rcov    = 1.757D0
+  shellUP = 1
+  shellDN = 1
+  N_UP(1) = 1
+  R_UP(1) = 0.300D0
+  N_DN(1) = 1
+  R_DN(1) = 0.300D0
+! Lithium
+else if ((species == 'Li').or.(species == 'Li_ECP_LC').or.(species == 'Li_ECP_SC')) then
+  elem    = 3
+  Qcore   = 2
+  Rcov    = 2.324D0
+  if (species == 'Li') then
+    Qpseudo = 0
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 1
+    R_UP(1) = 0.138D0
+    N_UP(2) = 1
+    R_UP(2) = 2.887D0
+    N_DN(1) = 1
+    R_DN(1) = 0.101D0
+    N_DN(2) = 0
+    R_DN(2) = 2.887D0
+  end if
+  if ((species == 'Li_ECP_LC').or.(species == 'Li_ECP_SC')) then
+    Qpseudo = 2
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 1
+    R_UP(1) = 2.887D0
+    N_DN(1) = 0
+    R_DN(1) = 2.887D0
+  end if
+! Beryllium
+else if ((species == 'Be').or.(species == 'Be_ECP_LC').or.(species == 'Be_ECP_SC')) then
+  elem    = 4
+  Qcore   = 2
+  Rcov    = 1.701D0
+  if (species == 'Be') then
+    Qpseudo = 0
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 1
+    R_UP(1) = 0.078D0
+    N_UP(2) = 1
+    R_UP(2) = 2.083D0
+    N_DN(1) = 1
+    R_DN(1) = 0.078D0
+    N_DN(2) = 1
+    R_DN(2) = 2.083D0
+  end if
+  if ((species == 'Be_ECP_LC').or.(species == 'Be_ECP_SC')) then
+    Qpseudo = 2
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 1
+    R_UP(1) = 2.083D0
+    N_DN(1) = 1
+    R_DN(1) = 2.083D0
+  end if
+! Boron
+else if ((species == 'B').or.(species == 'B_ECP_LC').or.(species == 'B_ECP_SC')) then
+  elem    = 5
+  Qcore   = 2
+  Rcov    = 1.549D0
+  if (species == 'B') then
+    Qpseudo = 0
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 1
+    R_UP(1) = 0.035D0
+    N_UP(2) = 2
+    R_UP(2) = 2.013D0
+    N_DN(1) = 1
+    R_DN(1) = 0.023D0
+    N_DN(2) = 1
+    R_DN(2) = 2.013D0
+  end if
+  if ((species == 'B_ECP_LC').or.(species == 'B_ECP_SC')) then
+    Qpseudo = 2
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 2
+    R_UP(1) = 2.013D0
+    N_DN(1) = 1
+    R_DN(1) = 2.013D0
+  end if
+! Carbon
+else if ((species == 'C').or.(species == 'C_ECP_LC').or.(species == 'C_ECP_SC')) then
+  elem    = 6
+  Qcore   = 2
+  Rcov    = 1.455D0
+  if (species == 'C') then
+    Qpseudo = 0
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 1
+    R_UP(1) = 0.083D0
+    N_UP(2) = 3
+    R_UP(2) = 2.002D0
+    N_DN(1) = 1
+    R_DN(1) = 0.069D0
+    N_DN(2) = 1
+    R_DN(2) = 2.002D0
+  end if
+  if ((species == 'C_ECP_LC').or.(species == 'C_ECP_SC')) then
+    Qpseudo = 2
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 3
+    R_UP(1) = 2.002D0
+    N_DN(1) = 1
+    R_DN(1) = 2.002D0
+  end if
+! Nitrogen
+else if ((species == 'N').or.(species == 'N_ECP_LC').or.(species == 'N_ECP_SC')) then
+  elem    = 7
+  Qcore   = 2
+  Rcov    = 1.417D0
+  if (species == 'N') then
+    Qpseudo = 0
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 1.559D0
+    N_DN(1) = 1
+    R_DN(1) = 0.053D0
+    N_DN(2) = 1
+    R_DN(2) = 1.499D0
+  end if
+  if ((species == 'N_ECP_LC').or.(species == 'N_ECP_SC')) then
+    Qpseudo = 2
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 1.559D0
+    N_DN(1) = 1
+    R_DN(1) = 1.499D0
+  end if
+! Oxygen
+else if ((species == 'O').or.(species == 'O_ECP_LC').or.(species == 'O_ECP_SC')) then
+  elem    = 8
+  Qcore   = 2
+  Rcov    = 1.379D0
+  if (species == 'O') then
+    Qpseudo = 0
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 1
+    R_UP(1) = 0.003D0
+    N_UP(2) = 4
+    R_UP(2) = 1.358D0
+    N_DN(1) = 1
+    R_DN(1) = 0.046D0
+    N_DN(2) = 2
+    R_DN(2) = 1.511D0
+  end if
+  if ((species == 'O_ECP_LC').or.(species == 'O_ECP_SC')) then
+    Qpseudo = 2
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 1.358D0
+    N_DN(1) = 2
+    R_DN(1) = 1.511D0
+  end if
+! Fluorine
+else if ((species == 'F').or.(species == 'F_ECP_LC').or.(species == 'F_ECP_SC')) then
+  elem    = 9
+  Qcore   = 2
+  Rcov    = 1.361D0
+  if (species == 'F') then
+    Qpseudo = 0
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 1
+    R_UP(1) = 0.002D0
+    N_UP(2) = 4
+    R_UP(2) = 1.204D0
+    N_DN(1) = 1
+    R_DN(1) = 0.002D0
+    N_DN(2) = 3
+    R_DN(2) = 1.406D0
+  end if
+  if ((species == 'F_ECP_LC').or.(species == 'F_ECP_SC')) then
+    Qpseudo = 2
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 1.204D0
+    N_DN(1) = 3
+    R_DN(1) = 1.406D0
+  end if
+! Neon
+else if ((species == 'Ne').or.(species == 'Ne_ECP_LC').or.(species == 'Ne_ECP_SC')) then
+  elem    = 10
+  Qcore   = 2
+  Rcov    = 1.342D0
+  if (species == 'Ne') then
+    Qpseudo = 0
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 1.079D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 1.079D0
+  end if
+  if ((species == 'Ne_ECP_LC').or.(species == 'Ne_ECP_SC')) then
+    Qpseudo = 2
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 1.079D0
+    N_DN(1) = 4
+    R_DN(1) = 1.079D0
+  end if
+! Sodium
+else if ((species == 'Na').or.(species == 'Na_ECP_LC').or.(species == 'Na_ECP_SC')) then
+  elem    = 11
+  Qcore   = 10
+  Rcov    = 2.910D0
+  if (species == 'Na') then
+    Qpseudo = 0
+    shellUP = 3
+    shellDN = 3
+    N_UP(1) = 1
+    R_UP(1) = 0.002D0
+    N_UP(2) = 4
+    R_UP(2) = 0.890D0
+    N_UP(3) = 1
+    R_UP(3) = 4.829D0
+    N_DN(1) = 1
+    R_DN(1) = 0.002D0
+    N_DN(2) = 4
+    R_DN(2) = 0.890D0
+    N_DN(3) = 0
+    R_DN(3) = 4.829D0
+  end if
+  if (species == 'Na_ECP_SC') then
+    Qpseudo = 2
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 4
+    R_UP(1) = 0.890D0
+    N_UP(2) = 1
+    R_UP(2) = 4.829D0
+    N_DN(1) = 4
+    R_DN(1) = 0.890D0
+    N_DN(2) = 0
+    R_DN(2) = 4.829D0
+  end if
+  if (species == 'Na_ECP_LC') then
+    Qpseudo = 10
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 1
+    R_UP(1) = 4.829D0
+    N_DN(1) = 0
+    R_DN(1) = 4.829D0
+  end if
+! Magnesium
+else if ((species == 'Mg').or.(species == 'Mg_ECP_LC').or.(species == 'Mg_ECP_SC')) then
+  elem    = 12
+  Qcore   = 10
+  Rcov    = 2.570D0
+  if (species == 'Mg') then
+    Qpseudo = 0
+    shellUP = 3
+    shellDN = 3
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.711D0
+    N_UP(3) = 1
+    R_UP(3) = 3.920D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.711D0
+    N_DN(3) = 1
+    R_DN(3) = 3.920D0
+  end if
+  if (species == 'Mg_ECP_SC') then
+    Qpseudo = 2
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 4
+    R_UP(1) = 0.711D0
+    N_UP(2) = 1
+    R_UP(2) = 3.920D0
+    N_DN(1) = 4
+    R_DN(1) = 0.711D0
+    N_DN(2) = 1
+    R_DN(2) = 3.920D0
+  end if
+  if (species == 'Mg_ECP_LC') then
+    Qpseudo = 10
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 1
+    R_UP(1) = 3.920D0
+    N_DN(1) = 1
+    R_DN(1) = 3.920D0
+  end if
+! Aluminum
+else if ((species == 'Al').or.(species == 'Al_ECP_LC').or.(species == 'Al_ECP_SC')) then
+  elem    = 13
+  Qcore   = 10
+  Rcov    = 2.229D0
+  if (species == 'Al') then
+    Qpseudo = 0
+    shellUP = 3
+    shellDN = 3
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.635D0
+    N_UP(3) = 2
+    R_UP(3) = 2.279D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.635D0
+    N_DN(3) = 1
+    R_DN(3) = 2.950D0
+  end if
+  if (species == 'Al_ECP_SC') then
+    Qpseudo = 2
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 4
+    R_UP(1) = 0.635D0
+    N_UP(2) = 2
+    R_UP(2) = 2.279D0
+    N_DN(1) = 4
+    R_DN(1) = 0.635D0
+    N_DN(2) = 1
+    R_DN(2) = 2.950D0
+  end if
+  if (species == 'Al_ECP_LC') then
+    Qpseudo = 10
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 2
+    R_UP(1) = 2.279D0
+    N_DN(1) = 1
+    R_DN(1) = 2.950D0
+  end if
+! Silicon
+else if ((species == 'Si').or.(species == 'Si_ECP_LC').or.(species == 'Si_ECP_SC')) then
+  elem    = 14
+  Qcore   = 10
+  Rcov    = 2.098D0
+  if (species == 'Si') then
+    Qpseudo = 0
+    shellUP = 3
+    shellDN = 3
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.559D0
+    N_UP(3) = 3
+    R_UP(3) = 2.051D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.559D0
+    N_DN(3) = 1
+    R_DN(3) = 2.555D0
+  end if
+  if (species == 'Si_ECP_SC') then
+    Qpseudo = 2
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 4
+    R_UP(1) = 0.559D0
+    N_UP(2) = 3
+    R_UP(2) = 2.051D0
+    N_DN(1) = 4
+    R_DN(1) = 0.559D0
+    N_DN(2) = 1
+    R_DN(2) = 2.555D0
+  end if
+  if (species == 'Si_ECP_LC') then
+    Qpseudo = 10
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 3
+    R_UP(1) = 2.051D0
+    N_DN(1) = 1
+    R_DN(1) = 2.555D0
+  end if
+! Phosphorus
+else if ((species == 'P').or.(species == 'P_ECP_LC').or.(species == 'P_ECP_SC')) then
+  elem    = 15
+  Qcore   = 10
+  Rcov    = 2.003D0
+  if (species == 'P') then
+    Qpseudo = 0
+    shellUP = 3
+    shellDN = 3
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.499D0
+    N_UP(3) = 4
+    R_UP(3) = 1.819D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.499D0
+    N_DN(3) = 1
+    R_DN(3) = 2.425D0
+  end if
+  if (species == 'P_ECP_SC') then
+    Qpseudo = 2
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 4
+    R_UP(1) = 0.499D0
+    N_UP(2) = 4
+    R_UP(2) = 1.819D0
+    N_DN(1) = 4
+    R_DN(1) = 0.499D0
+    N_DN(2) = 1
+    R_DN(2) = 2.425D0
+  end if
+  if (species == 'P_ECP_LC') then
+    Qpseudo = 10
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 1.819D0
+    N_DN(1) = 1
+    R_DN(1) = 2.425D0
+  end if
+! Sulphur
+else if ((species == 'S').or.(species == 'S_ECP_LC').or.(species == 'S_ECP_SC')) then
+  elem    = 16
+  Qcore   = 10
+  Rcov    = 1.928D0
+  if (species == 'S') then
+    Qpseudo = 0
+    shellUP = 3
+    shellDN = 3
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.465D0
+    N_UP(3) = 4
+    R_UP(3) = 1.612D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.465D0
+    N_DN(3) = 2
+    R_DN(3) = 1.609D0
+  end if
+  if (species == 'S_ECP_SC') then
+    Qpseudo = 2
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 4
+    R_UP(1) = 0.465D0
+    N_UP(2) = 4
+    R_UP(2) = 1.612D0
+    N_DN(1) = 4
+    R_DN(1) = 0.465D0
+    N_DN(2) = 2
+    R_DN(2) = 1.609D0
+  end if
+  if (species == 'S_ECP_LC') then
+    Qpseudo = 10
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 1.612D0
+    N_DN(1) = 2
+    R_DN(1) = 1.609D0
+  end if
+! Chlorine
+else if ((species == 'Cl').or.(species == 'Cl_ECP_LC').or.(species == 'Cl_ECP_SC')) then
+  elem    = 17
+  Qcore   = 10
+  Rcov    = 1.871D0
+  if (species == 'Cl') then
+    Qpseudo = 0
+    shellUP = 3
+    shellDN = 3
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.417D0
+    N_UP(3) = 4
+    R_UP(3) = 1.455D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.417D0
+    N_DN(3) = 3
+    R_DN(3) = 1.480D0
+  end if
+  if (species == 'Cl_ECP_SC') then
+    Qpseudo = 2
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 4
+    R_UP(1) = 0.417D0
+    N_UP(2) = 4
+    R_UP(2) = 1.455D0
+    N_DN(1) = 4
+    R_DN(1) = 0.417D0
+    N_DN(2) = 3
+    R_DN(2) = 1.480D0
+  end if
+  if (species == 'Cl_ECP_LC') then
+    Qpseudo = 10
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 1.455D0
+    N_DN(1) = 3
+    R_DN(1) = 1.480D0
+  end if
+! Argon
+else if ((species == 'Ar').or.(species == 'Ar_ECP_LC').or.(species == 'Ar_ECP_SC')) then
+  elem    = 18
+  Qcore   = 10
+  Rcov    = 1.852D0
+  if (species == 'Ar') then
+    Qpseudo = 0
+    shellUP = 3
+    shellDN = 3
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.387D0
+    N_UP(3) = 4
+    R_UP(3) = 1.330D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.387D0
+    N_DN(3) = 4
+    R_DN(3) = 1.330D0
+  end if
+  if (species == 'Ar_ECP_SC') then
+    Qpseudo = 2
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 4
+    R_UP(1) = 0.387D0
+    N_UP(2) = 4
+    R_UP(2) = 1.330D0
+    N_DN(1) = 4
+    R_DN(1) = 0.387D0
+    N_DN(2) = 4
+    R_DN(2) = 1.330D0
+  end if
+  if (species == 'Ar_ECP_LC') then
+    Qpseudo = 10
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 1.330D0
+    N_DN(1) = 4
+    R_DN(1) = 1.330D0
+  end if
+! Potassium
+else if ((species == 'K').or.(species == 'K_ECP_LC').or.(species == 'K_ECP_SC')) then
+  elem    = 19
+  Qcore   = 18
+  Rcov    = 3.836D0
+  if (species == 'K') then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.355D0
+    N_UP(3) = 4
+    R_UP(3) = 1.225D0
+    N_UP(4) = 1
+    R_UP(4) = 6.193D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.355D0
+    N_DN(3) = 4
+    R_DN(3) = 1.203D0
+    N_DN(4) = 0
+    R_DN(4) = 6.193D0
+  end if
+  if (species == 'K_ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 4
+    R_UP(1) = 1.225D0
+    N_UP(2) = 1
+    R_UP(2) = 6.193D0
+    N_DN(1) = 4
+    R_DN(1) = 1.203D0
+    N_DN(2) = 0
+    R_DN(2) = 6.193D0
+  end if
+  if (species == 'K_ECP_LC') then
+    Qpseudo = 18
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 1
+    R_UP(1) = 6.193D0
+    N_DN(1) = 0
+    R_DN(1) = 6.193D0
+  end if
+! Calcium
+else if ((species == 'Ca').or.(species == 'Ca_ECP_LC').or.(species == 'Ca_ECP_SC')) then
+  elem    = 20
+  Qcore   = 18
+  Rcov    = 3.288D0
+  if (species == 'Ca') then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.323D0
+    N_UP(3) = 4
+    R_UP(3) = 1.285D0
+    N_UP(4) = 1
+    R_UP(4) = 3.957D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.323D0
+    N_DN(3) = 4
+    R_DN(3) = 1.285D0
+    N_DN(4) = 1
+    R_DN(4) = 3.957D0
+  end if
+  if (species == 'Ca_ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 4
+    R_UP(1) = 1.285D0
+    N_UP(2) = 1
+    R_UP(2) = 3.957D0
+    N_DN(1) = 4
+    R_DN(1) = 1.285D0
+    N_DN(2) = 1
+    R_DN(2) = 3.957D0
+  end if
+  if (species == 'Ca_ECP_LC') then
+    Qpseudo = 18
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 1
+    R_UP(1) = 3.957D0
+    N_DN(1) = 1
+    R_DN(1) = 3.957D0
+  end if
+! [element]_[ECP or not]_[config]
+! Scandium, different electronic configurations
+else if (species(1:2) == 'Sc') then
+  elem    = 21
+  Qcore   = 18
+  Rcov    = 2.721D0
+  ! Core (1s, 2s2p) always the same. Define here
+  ! Also, radii for outer shells.
+  N_UP(1) = 1
+  R_UP(1) = 0.001D0
+  N_UP(2) = 4
+  R_UP(2) = 0.299D0
+  N_DN(1) = 1
+  R_DN(1) = 0.001D0
+  N_DN(2) = 4
+  R_DN(2) = 0.299D0
+
+  R_UP(3) = 1.129D0
+  R_UP(4) = 4.554D0
+  R_DN(3) = 1.129D0
+  R_DN(4) = 4.554D0
+  ! 3d2 4s1 configuration. 3s3p3d in one shell
+  if ((species(4:6) == '4s1').or.(species(11:13) == '4s1')) then  ! All-electron OR pseudopotential
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 6
+    N_UP(4) = 1
+    N_DN(3) = 4
+    N_DN(4) = 0
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 0
+      N_DN(3) = 6
+      N_DN(4) = 1
+    end if
+  ! 3d1 4s2 configuration. 3s3p3d in one shell
+  else if ((species(4:6) == '4s2').or.(species(11:13) == '4s2')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 5
+    N_UP(4) = 1
+    N_DN(3) = 4
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 1
+      N_DN(3) = 5
+      N_DN(4) = 1
+    end if
+  ! 3d and 4s in one shell
+  else if ((species(4:7) == '3d4s').or.(species(11:14) == '3d4s')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 4
+    N_UP(4) = 2
+    N_DN(3) = 4
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 1
+      N_DN(3) = 4
+      N_DN(4) = 2
+    end if
+  end if
+  ! If ECPs -> delete 1s and 2s2p
+  if (species(4:9) == 'ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = N_UP(3)
+    R_UP(1) = R_UP(3)
+    N_UP(2) = N_UP(4)
+    R_UP(2) = R_UP(4)
+    N_DN(1) = N_DN(3)
+    R_DN(1) = R_DN(3)
+    N_DN(2) = N_DN(4)
+    R_DN(2) = R_DN(4)
+  end if
+! Titanium, different electronic configurations
+else if (species(1:2) == 'Ti') then
+  elem    = 22
+  Qcore   = 18
+  Rcov    = 2.494D0
+  ! Core (1s, 2s2p) always the same. Define here
+  ! Also, radii for outer shells.
+  N_UP(1) = 1
+  R_UP(1) = 0.001D0
+  N_UP(2) = 4
+  R_UP(2) = 0.285D0
+  N_DN(1) = 1
+  R_DN(1) = 0.001D0
+  N_DN(2) = 4
+  R_DN(2) = 0.285D0
+
+  R_UP(3) = 1.005D0
+  R_UP(4) = 4.355D0
+  R_DN(3) = 1.005D0
+  R_DN(4) = 4.355D0
+  ! 3d3 4s1 configuration. 3s3p3d in one shell
+  if ((species(4:6) == '4s1').or.(species(11:13) == '4s1')) then  ! All-electron OR pseudopotential
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 7
+    N_UP(4) = 1
+    N_DN(3) = 4
+    N_DN(4) = 0
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 0
+      N_DN(3) = 7
+      N_DN(4) = 1
+    end if
+  ! 3d2 4s2 configuration. 3s3p3d in one shell
+  else if ((species(4:6) == '4s2').or.(species(11:13) == '4s2')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 6
+    N_UP(4) = 1
+    N_DN(3) = 4
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 1
+      N_DN(3) = 6
+      N_DN(4) = 1
+    end if
+  ! 3d and 4s in one shell
+  else if ((species(4:7) == '3d4s').or.(species(11:14) == '3d4s')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 4
+    N_UP(4) = 3
+    N_DN(3) = 4
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 1
+      N_DN(3) = 4
+      N_DN(4) = 3
+    end if
+  end if
+  ! If ECPs -> delete 1s and 2s2p
+  if (species(4:9) == 'ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = N_UP(3)
+    R_UP(1) = R_UP(3)
+    N_UP(2) = N_UP(4)
+    R_UP(2) = R_UP(4)
+    N_DN(1) = N_DN(3)
+    R_DN(1) = R_DN(3)
+    N_DN(2) = N_DN(4)
+    R_DN(2) = R_DN(4)
+  end if
+! Vanadium, different electronic configurations
+else if ((species(1:1) == 'V').and.(species(2:2) == '_')) then
+  elem    = 23
+  Qcore   = 18
+  Rcov    = 2.305D0
+  ! Core (1s, 2s2p) always the same. Define here
+  ! Also, radii for outer shells.
+  N_UP(1) = 1
+  R_UP(1) = 0.001D0
+  N_UP(2) = 4
+  R_UP(2) = 0.265D0
+  N_DN(1) = 1
+  R_DN(1) = 0.001D0
+  N_DN(2) = 4
+  R_DN(2) = 0.265D0
+
+  R_UP(3) = 1.026D0
+  R_UP(4) = 4.300D0
+  R_DN(3) = 1.026D0
+  R_DN(4) = 4.300D0
+  ! 3d4 4s1 configuration. 3s3p3d in one shell
+  if ((species(3:5) == '4s1').or.(species(10:12) == '4s1')) then  ! All-electron OR pseudopotential
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 8
+    N_UP(4) = 1
+    N_DN(3) = 4
+    N_DN(4) = 0
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 0
+      N_DN(3) = 8
+      N_DN(4) = 1
+    end if
+  ! 3d3 4s2 configuration. 3s3p3d in one shell
+  else if ((species(3:5) == '4s2').or.(species(10:12) == '4s2')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 7
+    N_UP(4) = 1
+    N_DN(3) = 4
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 1
+      N_DN(3) = 7
+      N_DN(4) = 1
+    end if
+  ! 3d and 4s in one shell
+  else if ((species(3:6) == '3d4s').or.(species(10:13) == '3d4s')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 4
+    N_UP(4) = 4
+    N_DN(3) = 4
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 1
+      N_DN(3) = 4
+      N_DN(4) = 4
+    end if
+  end if
+  ! If ECPs -> delete 1s and 2s2p
+  if (species(3:8) == 'ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = N_UP(3)
+    R_UP(1) = R_UP(3)
+    N_UP(2) = N_UP(4)
+    R_UP(2) = R_UP(4)
+    N_DN(1) = N_DN(3)
+    R_DN(1) = R_DN(3)
+    N_DN(2) = N_DN(4)
+    R_DN(2) = R_DN(4)
+  end if
+! Chromium, different electronic configurations
+else if (species(1:2) == 'Cr') then
+  elem    = 24
+  Qcore   = 18
+  Rcov    = 2.229D0
+  ! Core (1s, 2s2p) always the same. Define here
+  ! Also, radii for outer shells.
+  N_UP(1) = 1
+  R_UP(1) = 0.001D0
+  N_UP(2) = 4
+  R_UP(2) = 0.260D0
+  N_DN(1) = 1
+  R_DN(1) = 0.001D0
+  N_DN(2) = 4
+  R_DN(2) = 0.260D0
+
+  R_UP(3) = 1.025D0
+  R_UP(4) = 4.000D0
+  R_DN(3) = 1.025D0
+  R_DN(4) = 4.000D0
+  ! 3d5 4s1 configuration. 3s3p3d in one shell
+  if ((species(4:6) == '4s1').or.(species(11:13) == '4s1')) then  ! All-electron OR pseudopotential
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 4
+    N_DN(4) = 0
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 0
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d4 4s2 configuration. 3s3p3d in one shell
+  else if ((species(4:6) == '4s2').or.(species(11:13) == '4s2')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 8
+    N_UP(4) = 1
+    N_DN(3) = 4
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 1
+      N_DN(3) = 8
+      N_DN(4) = 1
+    end if
+  ! 3d and 4s in one shell
+  else if ((species(4:7) == '3d4s').or.(species(11:14) == '3d4s')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 4
+    N_UP(4) = 6
+    N_DN(3) = 4
+    N_DN(4) = 0
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 0
+      N_DN(3) = 4
+      N_DN(4) = 6
+    end if
+  end if
+  ! If ECPs -> delete 1s and 2s2p
+  if (species(4:9) == 'ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = N_UP(3)
+    R_UP(1) = R_UP(3)
+    N_UP(2) = N_UP(4)
+    R_UP(2) = R_UP(4)
+    N_DN(1) = N_DN(3)
+    R_DN(1) = R_DN(3)
+    N_DN(2) = N_DN(4)
+    R_DN(2) = R_DN(4)
+  end if
+! Manganese, different electronic configurations
+else if (species(1:2) == 'Mn') then
+  elem    = 25
+  Qcore   = 18
+  Rcov    = 2.211D0
+  ! Core (1s, 2s2p) always the same. Define here
+  ! Also, radii for outer shells.
+  N_UP(1) = 1
+  R_UP(1) = 0.001D0
+  N_UP(2) = 4
+  R_UP(2) = 0.240D0
+  N_DN(1) = 1
+  R_DN(1) = 0.001D0
+  N_DN(2) = 4
+  R_DN(2) = 0.240D0
+
+  R_UP(3) = 0.905D0
+  R_UP(4) = 4.500D0
+  R_DN(3) = 0.905D0
+  R_DN(4) = 4.500D0
+  ! 3d6 4s1 configuration. 3s3p3d in one shell
+  if ((species(4:6) == '4s1').or.(species(11:13) == '4s1')) then  ! All-electron OR pseudopotential
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 5
+    N_DN(4) = 0
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 5
+      N_UP(4) = 0
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d5 4s2 configuration. 3s3p3d in one shell
+  else if ((species(4:6) == '4s2').or.(species(11:13) == '4s2')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 4
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 1
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d and 4s in one shell
+  else if ((species(4:7) == '3d4s').or.(species(11:14) == '3d4s')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 4
+    N_UP(4) = 6
+    N_DN(3) = 4
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 1
+      N_DN(3) = 4
+      N_DN(4) = 6
+    end if
+  end if
+  ! If ECPs -> delete 1s and 2s2p
+  if (species(4:9) == 'ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = N_UP(3)
+    R_UP(1) = R_UP(3)
+    N_UP(2) = N_UP(4)
+    R_UP(2) = R_UP(4)
+    N_DN(1) = N_DN(3)
+    R_DN(1) = R_DN(3)
+    N_DN(2) = N_DN(4)
+    R_DN(2) = R_DN(4)
+  end if
+! Iron, different electronic configurations
+else if (species(1:2) == 'Fe') then
+  elem    = 26
+  Qcore   = 18
+  Rcov    = 2.211D0
+  ! Core (1s, 2s2p) always the same. Define here
+  ! Also, radii for outer shells.
+  N_UP(1) = 1
+  R_UP(1) = 0.001D0
+  N_UP(2) = 4
+  R_UP(2) = 0.230D0
+  N_DN(1) = 1
+  R_DN(1) = 0.001D0
+  N_DN(2) = 4
+  R_DN(2) = 0.230D0
+
+  R_UP(3) = 0.860D0
+  R_UP(4) = 4.500D0
+  R_DN(3) = 0.860D0
+  R_DN(4) = 4.500D0
+  ! 3d7 4s1 configuration. 3s3p3d in one shell
+  if ((species(4:6) == '4s1').or.(species(11:13) == '4s1')) then  ! All-electron OR pseudopotential
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 6
+    N_DN(4) = 0
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 6
+      N_UP(4) = 0
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d6 4s2 configuration. 3s3p3d in one shell
+  else if ((species(4:6) == '4s2').or.(species(11:13) == '4s2')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 5
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 5
+      N_UP(4) = 1
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d and 4s in one shell
+  else if ((species(4:7) == '3d4s').or.(species(11:14) == '3d4s')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 4
+    N_UP(4) = 6
+    N_DN(3) = 4
+    N_DN(4) = 2
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 2
+      N_DN(3) = 4
+      N_DN(4) = 6
+    end if
+  end if
+  ! If ECPs -> delete 1s and 2s2p
+  if (species(4:9) == 'ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = N_UP(3)
+    R_UP(1) = R_UP(3)
+    N_UP(2) = N_UP(4)
+    R_UP(2) = R_UP(4)
+    N_DN(1) = N_DN(3)
+    R_DN(1) = R_DN(3)
+    N_DN(2) = N_DN(4)
+    R_DN(2) = R_DN(4)
+  end if
+! Cobalt, different electronic configurations
+else if (species(1:2) == 'Co') then
+  elem    = 27
+  Qcore   = 18
+  Rcov    = 2.291D0
+  ! Core (1s, 2s2p) always the same. Define here
+  ! Also, radii for outer shells.
+  N_UP(1) = 1
+  R_UP(1) = 0.001D0
+  N_UP(2) = 4
+  R_UP(2) = 0.225D0
+  N_DN(1) = 1
+  R_DN(1) = 0.001D0
+  N_DN(2) = 4
+  R_DN(2) = 0.225D0
+
+  R_UP(3) = 0.825D0
+  R_UP(4) = 4.250D0
+  R_DN(3) = 0.825D0
+  R_DN(4) = 4.250D0
+  ! 3d8 4s1 configuration. 3s3p3d in one shell
+  if ((species(4:6) == '4s1').or.(species(11:13) == '4s1')) then  ! All-electron OR pseudopotential
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 7
+    N_DN(4) = 0
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 7
+      N_UP(4) = 0
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d7 4s2 configuration. 3s3p3d in one shell
+  else if ((species(4:6) == '4s2').or.(species(11:13) == '4s2')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 6
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 6
+      N_UP(4) = 1
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d and 4s in one shell
+  else if ((species(4:7) == '3d4s').or.(species(11:14) == '3d4s')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 4
+    N_UP(4) = 6
+    N_DN(3) = 4
+    N_DN(4) = 3
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 3
+      N_DN(3) = 4
+      N_DN(4) = 6
+    end if
+  end if
+  ! If ECPs -> delete 1s and 2s2p
+  if (species(4:9) == 'ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = N_UP(3)
+    R_UP(1) = R_UP(3)
+    N_UP(2) = N_UP(4)
+    R_UP(2) = R_UP(4)
+    N_DN(1) = N_DN(3)
+    R_DN(1) = R_DN(3)
+    N_DN(2) = N_DN(4)
+    R_DN(2) = R_DN(4)
+  end if
+! Nickel, different electronic configurations
+else if (species(1:2) == 'Ni') then
+  elem    = 28
+  Qcore   = 18
+  Rcov    = 2.173D0
+  ! Core (1s, 2s2p) always the same. Define here
+  ! Also, radii for outer shells.
+  N_UP(1) = 1
+  R_UP(1) = 0.001D0
+  N_UP(2) = 4
+  R_UP(2) = 0.210D0
+  N_DN(1) = 1
+  R_DN(1) = 0.001D0
+  N_DN(2) = 4
+  R_DN(2) = 0.210D0
+
+  R_UP(3) = 0.820D0
+  R_UP(4) = 4.200D0
+  R_DN(3) = 0.820D0
+  R_DN(4) = 4.200D0
+  ! 3d9 4s1 configuration. 3s3p3d in one shell
+  if ((species(4:6) == '4s1').or.(species(11:13) == '4s1')) then  ! All-electron OR pseudopotential
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 8
+    N_DN(4) = 0
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 8
+      N_UP(4) = 0
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d8 4s2 configuration. 3s3p3d in one shell
+  else if ((species(4:6) == '4s2').or.(species(11:13) == '4s2')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 7
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 7
+      N_UP(4) = 1
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d and 4s in one shell
+  else if ((species(4:7) == '3d4s').or.(species(11:14) == '3d4s')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 4
+    N_UP(4) = 6
+    N_DN(3) = 4
+    N_DN(4) = 4
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 4
+      N_DN(3) = 4
+      N_DN(4) = 6
+    end if
+  end if
+  ! If ECPs -> delete 1s and 2s2p
+  if (species(4:9) == 'ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = N_UP(3)
+    R_UP(1) = R_UP(3)
+    N_UP(2) = N_UP(4)
+    R_UP(2) = R_UP(4)
+    N_DN(1) = N_DN(3)
+    R_DN(1) = R_DN(3)
+    N_DN(2) = N_DN(4)
+    R_DN(2) = R_DN(4)
+  end if
+! Copper, different electronic configurations
+else if (species(1:2) == 'Cu') then
+  elem    = 29
+  Qcore   = 18
+  Rcov    = 2.211D0
+  ! Core (1s, 2s2p) always the same. Define here
+  ! Also, radii for outer shells.
+  N_UP(1) = 1
+  R_UP(1) = 0.001D0
+  N_UP(2) = 4
+  R_UP(2) = 0.195D0
+  N_DN(1) = 1
+  R_DN(1) = 0.001D0
+  N_DN(2) = 4
+  R_DN(2) = 0.195D0
+
+  R_UP(3) = 1.130D0
+  R_UP(4) = 4.700D0
+  R_DN(3) = 1.130D0
+  R_DN(4) = 4.700D0
+  ! 3d10 4s1 configuration. 3s3p3d in one shell
+  if ((species(4:6) == '4s1').or.(species(11:13) == '4s1')) then  ! All-electron OR pseudopotential
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 9
+    N_DN(4) = 0
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 9
+      N_UP(4) = 0
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d9 4s2 configuration. 3s3p3d in one shell
+  else if ((species(4:6) == '4s2').or.(species(11:13) == '4s2')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 9
+    N_UP(4) = 1
+    N_DN(3) = 8
+    N_DN(4) = 1
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 8
+      N_UP(4) = 1
+      N_DN(3) = 9
+      N_DN(4) = 1
+    end if
+  ! 3d and 4s in one shell
+  else if ((species(4:7) == '3d4s').or.(species(11:14) == '3d4s')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 4
+    N_UP(4) = 6
+    N_DN(3) = 4
+    N_DN(4) = 5
+    ! If Majority == DN
+    if (species(len(trim(species))-1:len(trim(species))) == 'DN') then
+      N_UP(3) = 4
+      N_UP(4) = 5
+      N_DN(3) = 4
+      N_DN(4) = 6
+    end if
+  end if
+  ! If ECPs -> delete 1s and 2s2p
+  if (species(4:9) == 'ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = N_UP(3)
+    R_UP(1) = R_UP(3)
+    N_UP(2) = N_UP(4)
+    R_UP(2) = R_UP(4)
+    N_DN(1) = N_DN(3)
+    R_DN(1) = R_DN(3)
+    N_DN(2) = N_DN(4)
+    R_DN(2) = R_DN(4)
+  end if
+! Zinc
+else if (species(1:2) == 'Zn') then
+  elem    = 30
+  Qcore   = 18
+  Rcov    = 2.362D0
+  ! Core (1s, 2s2p) always the same. Define here
+  ! Also, radii for outer shells.
+  N_UP(1) = 1
+  R_UP(1) = 0.001D0
+  N_UP(2) = 4
+  R_UP(2) = 0.182D0
+  N_DN(1) = 1
+  R_DN(1) = 0.001D0
+  N_DN(2) = 4
+  R_DN(2) = 0.182D0
+
+  R_UP(3) = 0.755D0
+  R_UP(4) = 4.745D0
+  R_DN(3) = 0.755D0
+  R_DN(4) = 4.745D0
+
+  Qpseudo = 0
+  shellUP = 4
+  shellDN = 4
+  N_UP(3) = 9
+  N_UP(4) = 1
+  N_DN(3) = 9
+  N_DN(4) = 1
+  ! 3d and 4s in one shell
+  if ((species(4:7) == '3d4s').or.(species(11:14) == '3d4s')) then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(3) = 4
+    N_UP(4) = 6
+    N_DN(3) = 4
+    N_DN(4) = 6
+  end if
+  ! If ECPs -> delete 1s and 2s2p
+  if (species(4:9) == 'ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = N_UP(3)
+    R_UP(1) = R_UP(3)
+    N_UP(2) = N_UP(4)
+    R_UP(2) = R_UP(4)
+    N_DN(1) = N_DN(3)
+    R_DN(1) = R_DN(3)
+    N_DN(2) = N_DN(4)
+    R_DN(2) = R_DN(4)
+  end if
+! Gallium
+else if ((species == 'Ga').or.(species == 'Ga_ECP_LC').or.(species == 'Ga_ECP_SC')) then
+  elem    = 31
+  Qcore   = 28
+  Rcov    = 2.351D0
+  if (species == 'Ga') then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.180D0
+    N_UP(3) = 9
+    R_UP(3) = 0.710D0
+    N_UP(4) = 2
+    R_UP(4) = 4.165D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.180D0
+    N_DN(3) = 9
+    R_DN(3) = 0.710D0
+    N_DN(4) = 1
+    R_DN(4) = 4.325D0
+  end if
+  if (species == 'Ga_ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 9
+    R_UP(1) = 0.710D0
+    N_UP(2) = 2
+    R_UP(2) = 4.165D0
+    N_DN(1) = 9
+    R_DN(1) = 0.710D0
+    N_DN(2) = 1
+    R_DN(2) = 4.325D0
+  end if
+  if (species == 'Ga_ECP_LC') then
+    Qpseudo = 28
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 2
+    R_UP(1) = 4.165D0
+    N_DN(1) = 1
+    R_DN(1) = 4.325D0
+  end if
+! Germanium
+else if ((species == 'Ge').or.(species == 'Ge_ECP_LC').or.(species == 'Ge_ECP_SC')) then
+  elem    = 32
+  Qcore   = 28
+  Rcov    = 2.305D0
+  if (species == 'Ge') then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.173D0
+    N_UP(3) = 9
+    R_UP(3) = 0.673D0
+    N_UP(4) = 3
+    R_UP(4) = 3.334D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.173D0
+    N_DN(3) = 9
+    R_DN(3) = 0.673D0
+    N_DN(4) = 1
+    R_DN(4) = 3.296D0
+  end if
+  if (species == 'Ge_ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 9
+    R_UP(1) = 0.673D0
+    N_UP(2) = 3
+    R_UP(2) = 3.334D0
+    N_DN(1) = 9
+    R_DN(1) = 0.673D0
+    N_DN(2) = 1
+    R_DN(2) = 3.296D0
+  end if
+  if (species == 'Ge_ECP_LC') then
+    Qpseudo = 28
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 3
+    R_UP(1) = 3.334D0
+    N_DN(1) = 1
+    R_DN(1) = 3.296D0
+  end if
+! Arsenic
+else if ((species == 'As').or.(species == 'As_ECP_LC').or.(species == 'As_ECP_SC')) then
+  elem    = 33
+  Qcore   = 28
+  Rcov    = 2.268D0
+  if (species == 'As') then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.166D0
+    N_UP(3) = 9
+    R_UP(3) = 0.625D0
+    N_UP(4) = 4
+    R_UP(4) = 3.202D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.166D0
+    N_DN(3) = 9
+    R_DN(3) = 0.625D0
+    N_DN(4) = 1
+    R_DN(4) = 2.953D0
+  end if
+  if (species == 'As_ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 9
+    R_UP(1) = 0.625D0
+    N_UP(2) = 4
+    R_UP(2) = 3.202D0
+    N_DN(1) = 9
+    R_DN(1) = 0.625D0
+    N_DN(2) = 1
+    R_DN(2) = 2.953D0
+  end if
+  if (species == 'As_ECP_LC') then
+    Qpseudo = 28
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 3.202D0
+    N_DN(1) = 1
+    R_DN(1) = 2.953D0
+  end if
+! Selenium
+else if ((species == 'Se').or.(species == 'Se_ECP_LC').or.(species == 'Se_ECP_SC')) then
+  elem    = 34
+  Qcore   = 28
+  Rcov    = 2.192D0
+  if (species == 'Se') then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.159D0
+    N_UP(3) = 9
+    R_UP(3) = 0.585D0
+    N_UP(4) = 4
+    R_UP(4) = 3.192D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.159D0
+    N_DN(3) = 9
+    R_DN(3) = 0.585D0
+    N_DN(4) = 2
+    R_DN(4) = 2.910D0
+  end if
+  if (species == 'Se_ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 9
+    R_UP(1) = 0.585D0
+    N_UP(2) = 4
+    R_UP(2) = 3.192D0
+    N_DN(1) = 9
+    R_DN(1) = 0.585D0
+    N_DN(2) = 2
+    R_DN(2) = 2.910D0
+  end if
+  if (species == 'Se_ECP_LC') then
+    Qpseudo = 28
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 3.192D0
+    N_DN(1) = 2
+    R_DN(1) = 2.910D0
+  end if
+! Bromium
+else if ((species == 'Br').or.(species == 'Br_ECP_LC').or.(species == 'Br_ECP_SC')) then
+  elem    = 35
+  Qcore   = 28
+  Rcov    = 2.154D0
+  if (species == 'Br') then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.154D0
+    N_UP(3) = 9
+    R_UP(3) = 0.560D0
+    N_UP(4) = 4
+    R_UP(4) = 2.647D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.154D0
+    N_DN(3) = 9
+    R_DN(3) = 0.560D0
+    N_DN(4) = 3
+    R_DN(4) = 2.634D0
+  end if
+  if (species == 'Br_ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 9
+    R_UP(1) = 0.560D0
+    N_UP(2) = 4
+    R_UP(2) = 2.647D0
+    N_DN(1) = 9
+    R_DN(1) = 0.560D0
+    N_DN(2) = 3
+    R_DN(2) = 2.634D0
+  end if
+  if (species == 'Br_ECP_LC') then
+    Qpseudo = 28
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 2.647D0
+    N_DN(1) = 3
+    R_DN(1) = 2.634D0
+  end if
+! Krypton
+else if ((species == 'Kr').or.(species == 'Kr_ECP_LC').or.(species == 'Kr_ECP_SC')) then
+  elem    = 36
+  Qcore   = 28
+  Rcov    = 2.116D0
+  if (species == 'Kr') then
+    Qpseudo = 0
+    shellUP = 4
+    shellDN = 4
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.147D0
+    N_UP(3) = 9
+    R_UP(3) = 0.523D0
+    N_UP(4) = 4
+    R_UP(4) = 2.475D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.147D0
+    N_DN(3) = 9
+    R_DN(3) = 0.523D0
+    N_DN(4) = 4
+    R_DN(4) = 2.475D0
+  end if
+  if (species == 'Kr_ECP_SC') then
+    Qpseudo = 10
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 9
+    R_UP(1) = 0.523D0
+    N_UP(2) = 4
+    R_UP(2) = 2.475D0
+    N_DN(1) = 9
+    R_DN(1) = 0.523D0
+    N_DN(2) = 4
+    R_DN(2) = 2.475D0
+  end if
+  if (species == 'Kr_ECP_LC') then
+    Qpseudo = 28
+    shellUP = 1
+    shellDN = 1
+    N_UP(1) = 4
+    R_UP(1) = 2.475D0
+    N_DN(1) = 4
+    R_DN(1) = 2.475D0
+  end if
+! Zirconium
+else if ((species(1:2) == 'Zr').or.(species(1:9) == 'Zr_ECP_LC').or.(species(1:9) == 'Zr_ECP_SC')) then
+  elem    = 40
+  Qcore   = 36
+  Rcov    = 2.797D0
+  if (species(1:2) == 'Zr') then
+    Qpseudo = 0
+    shellUP = 5
+    shellDN = 5
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.147D0
+    N_UP(3) = 9
+    R_UP(3) = 0.523D0
+    N_UP(4) = 6
+    R_UP(4) = 1.475D0
+    N_UP(5) = 1
+    R_UP(5) = 3.500D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.147D0
+    N_DN(3) = 9
+    R_DN(3) = 0.523D0
+    N_DN(4) = 4
+    R_DN(4) = 1.475D0
+    N_DN(5) = 1
+    R_DN(5) = 3.500D0
+  end if
+  if (species(1:9) == 'Zr_ECP_SC') then
+    Qpseudo = 10
+    shellUP = 3
+    shellDN = 3
+    N_UP(1) = 9
+    R_UP(1) = 0.523D0
+    N_UP(2) = 6
+    R_UP(2) = 1.475D0
+    N_UP(3) = 1
+    R_UP(3) = 3.500D0
+    N_DN(1) = 9
+    R_DN(1) = 0.523D0
+    N_DN(2) = 4
+    R_DN(2) = 1.475D0
+    N_DN(3) = 1
+    R_DN(3) = 3.500D0
+  end if
+  if (species(1:9) == 'Zr_ECP_LC') then
+    Qpseudo = 28
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 6
+    R_UP(1) = 1.475D0
+    N_UP(2) = 1
+    R_UP(2) = 3.500D0
+    N_DN(1) = 4
+    R_DN(1) = 1.475D0
+    N_DN(2) = 1
+    R_DN(2) = 3.500D0
+  end if
+  ! If LS configuration is desired ->
+  if (species(len(trim(species))-1:len(trim(species))) == 'LS') then
+    N_UP(shellUP-1) = 5
+    N_DN(shellDN-1) = 5
+  end if
+! Xenon
+else if ((species == 'Xe').or.(species == 'Xe_ECP_LC').or.(species == 'Xe_ECP_SC')) then
+  elem    = 54
+  Qcore   = 46
+  Rcov    = 2.476D0
+  if (species == 'Xe') then
+    Qpseudo = 0
+    shellUP = 5
+    shellDN = 5
+    N_UP(1) = 1
+    R_UP(1) = 0.001D0
+    N_UP(2) = 4
+    R_UP(2) = 0.095D0
+    N_UP(3) = 9
+    R_UP(3) = 0.273D0
+    N_UP(4) = 9
+    R_UP(4) = 0.848D0
+    N_UP(5) = 1
+    R_UP(5) = 2.678D0
+    N_DN(1) = 1
+    R_DN(1) = 0.001D0
+    N_DN(2) = 4
+    R_DN(2) = 0.095D0
+    N_DN(3) = 9
+    R_DN(3) = 0.273D0
+    N_DN(4) = 9
+    R_DN(4) = 0.848D0
+    N_DN(5) = 1
+    R_DN(5) = 2.678D0
+  end if
+  if (species == 'Xe_ECP_SC') then
+    Qpseudo = 10
+    shellUP = 3
+    shellDN = 3
+    N_UP(1) = 9
+    R_UP(1) = 0.273D0
+    N_UP(2) = 9
+    R_UP(2) = 0.848D0
+    N_UP(3) = 1
+    R_UP(3) = 2.678D0
+    N_DN(1) = 9
+    R_DN(1) = 0.273D0
+    N_DN(2) = 9
+    R_DN(2) = 0.848D0
+    N_DN(3) = 1
+    R_DN(3) = 2.678D0
+  end if
+  if (species == 'Zr_ECP_LC') then
+    Qpseudo = 28
+    shellUP = 2
+    shellDN = 2
+    N_UP(1) = 9
+    R_UP(1) = 0.848D0
+    N_UP(2) = 1
+    R_UP(2) = 2.678D0
+    N_DN(1) = 9
+    R_DN(1) = 0.848D0
+    N_DN(2) = 1
+    R_DN(2) = 2.678D0
+  end if
+
+else
+  write(6,*) 'Incorrect species specified!'
+end if
+return
+end subroutine database
+
+
 
 
 subroutine mc_step(rthetaphi1, center_xyz, rthetaphi2, xyz2, stepsize)
