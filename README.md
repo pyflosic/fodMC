@@ -1,5 +1,6 @@
-<img src="doc/images/logo_fodMC.png" width="400">
-
+<p align="center">
+  <img src="doc/images/logo_fodMC.png" width="400">
+</p>
 
 # fodMC - Fermi-orbital descriptor Monte-Carlo 
 [![license](https://img.shields.io/badge/license-APACHE2-green)](https://www.apache.org/licenses/LICENSE-2.0)
