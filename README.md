@@ -56,5 +56,7 @@ correct structural motifs for such systems.
 In addition, there is a publication summarizing essential findings regarding FODs, see 
 
 ### [Interpretation and automatic generation of Fermi-orbital descriptors](https://onlinelibrary.wiley.com/doi/full/10.1002/jcc.26062)
+```
 S. Schwalbe, K. Trepte, et al.      
 Journal of Computational Chemistry, vol. 40, pp. 2843-2857, 2019    
+```
