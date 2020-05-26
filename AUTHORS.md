@@ -2,17 +2,17 @@
 Core routines, code structure and working examples.
 
 #### Kai Trepte, PhD  
-email: trept1k@cmich.edu
+email: kai.trepte1987@gmail.edu
 - all main routines
-
-# co-developers: 
-Additional features, code testing and improvements.
 
 #### Sebastian Schwalbe, M. Sc.  
 email: theonov13@gmail.com
 - pyfodMC_GUI 
 - source code structuring 
 - ideas for improvements of the fodMC (simplification of input) 
+
+# co-developers: 
+Additional features, code testing and improvements.
 
 #### Alex Johnson
 email: johns1ai@cmich.edu
