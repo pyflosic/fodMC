@@ -86,6 +86,13 @@
 - Introduce pyfodMC_GUI
 - Thanks to Sebastian Schwalbe
 
+#### 20/05/2020       SS   
+- Introduce mol2fodmc   
+- Add various features pyfodmc.py    
+
+#### 21/05/2020       KT/SS    
+- Build python pip package    
+
 #### 26/05/2020       KT
 - Include xx_database_xx into the fortran subroutine
 - No need for the explicit input file
