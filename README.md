@@ -46,20 +46,12 @@ You can either work at the FORTRAN level (see examples/fortran) or
 use the Python-Overlay, see examples/python.
 
 
-
-
 # ATTENTION
 Initial FODs for transition metals and larger atoms may currently not be reliable.
 This is due to the fact that the spherical symmetry of the core FODs (with is strictly enforced)
 might not represent a good guess for such systems. Intensive research is needed to determine the 
 correct structural motifs for such systems.
 
-
-## Tutorials
-
-There are several tutorial videos about the 
-usage and handling of the fodMC at youtube, 
-at the channel 'The extended Physiker Clan'.
 
 In addition, there is a publication summarizing essential findings regarding FODs, see 
 'Interpretation and automatic generation of Fermi-orbital descriptors', S. Schwalbe, K. Trepte, et al., Journal of Computational Chemistry, vol. 40, pp. 2843-2857, 2019
