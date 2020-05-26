@@ -9,4 +9,6 @@
 *.egg-info
 tmp*
 *.so 
+dist 
+build 
 log 
