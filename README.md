@@ -35,7 +35,7 @@ Journal of Computational Chemistry, vol. 40, pp. 2843-2857, 2019
 ## Installation (using pip) 
 
 ```bash 
-$ pip3 install fodmc 
+$ pip3 install fodMC
 ```
 
 
