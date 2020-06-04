@@ -48,7 +48,7 @@ $ pip3 install -e .
 The Python module is called fodmc. 
 
 There are examples to make you familiar with the execution.    
-You can either work at the FORTRAN level (see examples/fortran) or    
+You can either work at the Fortran level (see examples/fortran) or    
 use the Python interface, see examples/python.   
 
 
