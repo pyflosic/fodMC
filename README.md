@@ -21,7 +21,7 @@ Sidekicks:
 Coding language: FORTRAN, Python 
 
 ## Description
-The fodMC is a generator for Fermi-orbital descriptor (FOD) positions      
+fodMC is a generator for Fermi-orbital descriptor (FOD) positions      
 to be used in the Fermi-Löwdin orbital self-interaction correction (FLO-SIC) method.               
 There is a publication, explaining the underlying idea of this program; please see    
 
