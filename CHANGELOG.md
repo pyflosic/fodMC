@@ -96,3 +96,8 @@
 #### 26/05/2020       KT
 - Include xx_database_xx into the fortran subroutine
 - No need for the explicit input file
+
+#### 16/06/2020      KT
+- Updated executable to newest version
+- Include more symmetry
+

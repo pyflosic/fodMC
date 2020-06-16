@@ -64,9 +64,20 @@ subroutine get_guess()
 ! 24. May 2019
 ! Introduce structural motifs. Use these for atoms and core FODs. Thus, no distribution of 
 ! points on a sphere necessary for such FODs.
-! Further, a Metropolis-like algorithm is now used for the rotation of core vs. valence FODs.
 ! 22. May 2020
 ! Incorporate xx_database_xx into this file as a subroutine.
+! 06. September 2019
+! Starting implementing symmetry-adapted FODs. Make the FODs as symmetric as possible.
+! Symmetrize lone FODs with respect to bond FODs. (01. December, 2019)
+! TBD: Symmetrize bond FODs with respect to bond FODs. 
+! TBD: Symmetrize lone FODs with respect to lone FODs in single bonded situations. 
+! TBD: Symmetrize core FODs with respect to valence FODs.
+! 29. October 2019
+! Idea: Place bond FODs closer to the atom with larger electronegativity -> better start points? TBD
+! 05. February 2020
+! Make analysis of planarity more robust. I.e. it should not depend on the order of the atoms.
+! Once analyzed, check not just one atom, but both atoms involved in the bond. If either is in a planar environment ->
+! move FODs out of plane. Thin about this!
 
 implicit none
 ! new array structure: 3 real     (coordinates of center)
@@ -126,12 +137,15 @@ real(8)              :: start_t, finish_t                     ! start and finish
 real(8)              :: d_bond                                ! distance to closest atom
 real(8)              :: scale_r                               ! scaling factor for the determination of where to place multiple FODs
 integer              :: counter_up, counter_dn, counter       ! counter. To count things
+integer              :: counter2                              ! counter. Lone FODs. 
 real(8)              :: full_rot(3,3)                         ! rotation matrix  rot_x(3,3), rot_y(3,3), rot_z(3,3)
-real(8), parameter   :: pi = 3.14159265358979323846           ! define pi. It is as accurate as needed :)
+real(8), parameter   :: pi = 4.0D0*atan(1.0D0)                ! define pi.
+real(8)              :: angle                                 ! rotation angle
+real(8)              :: dist1, dist2                          ! distance of FODs to atoms. Use to evaluate bond FODs in the symmetrization of lone FODs
 real(8)              :: dip_x, dip_y, dip_z                   ! point charge dipole in x, y, z
 real(8)              :: cent_x, cent_y, cent_z                ! center of molecule/cell. For dipole evaluation
 ! Used for the connectivity matrix
-character(len=50), allocatable :: bond_pattern(:)             ! bond pattern to be read in (NOT including lone pairs)
+character(len=99), allocatable :: bond_pattern(:)             ! bond pattern to be read in (NOT including lone pairs)
 character(len=15)    :: bond_centers, bond_fods               ! for each individual entry of centers and FODs
 integer, allocatable :: con_mat(:,:)                          ! connectivity matrix between all atoms. Order N x N
 integer, allocatable :: lone_fods(:,:)                        ! number of UP and DN lone FODs per atom
@@ -140,6 +154,7 @@ real(8)              :: bond_vector(3)                        ! vector describin
 real(8), allocatable :: tmp_vectors(:,:)                      ! bond vector in case of a planar molecule -> get normal vector by cross product
 real(8)              :: tmp_vector(3)                         ! tmeporary vector
 real(8)              :: perpendicular_vec(3)                  ! vector perpedicular to the bond vector
+real(8)              :: perpendicular_vec_motif(3)            ! vector perpedicular to the structural motif under consideration
 integer, allocatable :: bond_count_up(:)                      ! counting the number of bonds already assumed by an atom -> assign valence properly. 
 integer, allocatable :: bond_count_dn(:)                      ! counting the number of bonds already assumed by an atom -> assign valence properly.
 real(8), allocatable :: r_tmp_up(:)                           ! temporary arrays to store radii of all shells from the database
@@ -689,7 +704,7 @@ else
     ! use distance between atoms as radii. Only relevant for lone FODs
     !
     else
-      d_bond = 10.0
+      d_bond = 10.0D0
       do b = 1, number_of_centers
         if (a /= b) then
           ave_dist1 = sqrt(sum((pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:))**2))         ! take shortest distance to neighboring atoms -> use 1/2 of this as radius
@@ -874,23 +889,10 @@ if (number_of_centers == 1) then
             end do
           end do
         end do
-        !
-        ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
-        ! How: ... Introduce random number rand_metro [0,1]
-        !          if (ave_dist2_up < ave_dist1_up) -> take new config
-        !          if (ave_dist2_up > ave_dist1_up) -> if (ave_dist2_up-ave_dist1_up) < rand_metro*step_size => still take new config. Else: Take old config.
-        !          ==>> If new 1/r is only slighlty larger AND rand_metro*step_size is small enough
         if (ave_dist2_up < ave_dist1_up) then
           pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
           pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
           ave_dist1_up = ave_dist2_up
-        else
-          call random_number(rand_metro)
-          if ((ave_dist2_up-ave_dist1_up) < rand_metro*step_size*0.01) then              ! HERE: NOT 100% good. Moves stuff away from the minimum (e.g. Mg atom) ....
-            pos1_up(a)%point_x_y_z(:,:,:) = pos2_up(a)%point_x_y_z(:,:,:)
-            pos1_up(a)%r_theta_phi(:,:,:) = pos2_up(a)%r_theta_phi(:,:,:)
-            ave_dist1_up = ave_dist2_up
-          end if
         end if
       end do  ! end MC cycles
     end if    ! end if - shells
@@ -937,23 +939,10 @@ if (number_of_centers == 1) then
             end do
           end do
         end do
-        !
-        ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
-        ! How: ... Introduce random number rand_metro [0,1]
-        !          if (ave_dist2_dn < ave_dist1_dn) -> take new config
-        !          if (ave_dist2_dn > ave_dist1_dn) -> if (ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size => still take new config. Else: Take old config.
-        !          ==>> If new 1/r is only slighlty larger AND rand_metro*step_size is small enough
         if (ave_dist2_dn < ave_dist1_dn) then
           pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
           pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
           ave_dist1_dn = ave_dist2_dn
-        else
-          call random_number(rand_metro)
-          if ((ave_dist2_dn-ave_dist1_dn) < rand_metro*step_size*0.01) then
-            pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-            pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-            ave_dist1_dn = ave_dist2_dn
-          end if
         end if
       end do  ! end MC cycles
       !
@@ -989,22 +978,11 @@ if (number_of_centers == 1) then
             end do
           end do
         end do
-    ! Use Metropolis-like algorithm. Allow f_r to go uphill for the rotations!
-    ! How: ... Introduce random number rand_metro [0,1]
-    !          if (ave_dist2 < ave_dist1) -> take new config
-    !          if (ave_dist2 > ave_dist1) -> if (ave_dist2-ave_dist1) < rand_metro*step_size => still take new config. Else: Take old config.
-    !          ==>> If new 1/r is only slighlty larger AND rand_metro*step_size is small enough
+        ! Keep config ?
         if (ave_dist2 < ave_dist1) then
           pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
           pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
           ave_dist1 = ave_dist2
-        else
-          call random_number(rand_metro)
-          if ((ave_dist2-ave_dist1) < rand_metro*step_size*0.01) then
-            pos1_dn(a)%point_x_y_z(:,:,:) = pos2_dn(a)%point_x_y_z(:,:,:)
-            pos1_dn(a)%r_theta_phi(:,:,:) = pos2_dn(a)%r_theta_phi(:,:,:)
-            ave_dist1 = ave_dist2
-          end if
         end if
       end do  ! end MC cycles
     end if    ! end if - shells
@@ -1084,20 +1062,20 @@ if (number_of_centers == 1) then
     write (junk, '(I8)') size(pos1_up)+sum(pos1_up(1)%n_points(:))+sum(pos1_dn(1)%n_points(:))                       ! number of entries in the xyz file
     write(19,fmt='(A)') adjustl(junk)
     write(19,*) 'angstrom'
-    if (pos1_up(1)%elements(2:2) == '_') then
-      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:1),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
+    if (pos1_up(1)%elements(2:2)=='_'.or.pos1_up(1)%elements(2:2)=='') then
+      write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(1)%elements(1:1),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
     else
-      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(1)%elements(1:2),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor
+      write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(1)%elements(1:2),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor
     end if
     d = 1
     do b = 1, pos1_up(d)%n_shells
       do c = 1, pos1_up(d)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+        write(19,fmt='(A4,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
       end do
     end do
     do b = 1, pos1_dn(d)%n_shells
       do c = 1, pos1_dn(d)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+        write(19,fmt='(A4,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
       end do
     end do
     close(unit=19)
@@ -1155,7 +1133,7 @@ else                                                                           !
   !
   allocate(element_symbol(number_of_centers))                                  ! maximum number of element symbols
   do a = 1, number_of_centers
-    element_symbol(a) = 'X'                                                    ! dummy argument
+    element_symbol(a) = 'Y'                                                    ! dummy argument
   end do
   counter = 0
   do a = 1, size(pos1_up)
@@ -1447,103 +1425,203 @@ else                                                                           !
             if (a < b) then                                                    ! Add UP FOD 
               do f = 1, con_mat(a,b)
                 c = pos1_up(a)%n_shells                                        ! valence shell UP
-                pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = &
-                & bond_center(:) + perpendicular_vec(:)*pos1_up(a)%r_theta_phi(c,bond_count_up(a),1)*scale_r           ! initial pos of UP channel. To be rotated around the bond axis. scale_r is a factor
+                !
+                ! NEW: 
+                ! get bond FODs via structural motifs
+                ! Rotate them into bond_vector to have them perpendicular to the bond axis
+                ! Use different structual motifs than for core FODs, which will be different from 4 points on
+                ! Get perpendicular vector corresponding to the structural motif -> use this to rotate the motif perpendicular to 
+                ! the bond axis 
+                !
+                call struct_motif_bond_lone(con_mat(a,b),f,pos1_up(a)%r_theta_phi(c,bond_count_up(a),1)*scale_r, &
+                                            bond_center,pos1_up(a)%point_x_y_z(c,bond_count_up(a),:),perpendicular_vec_motif)
                 bond_count_up(a) = bond_count_up(a) + 1
               end do
-              !
-              ! Rotate the point around the bond vector (bond axis).
-              !
-              ave_dist1 = 100000.0
-              do d = 1, cycles
-                do f = 1, con_mat(a,b)
-                  pos2_up(a)%point_x_y_z(c,bond_count_up(a)-f,:) = pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)      ! store original positions
-                  call rotate_around_axis(bond_vector,bond_center,pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:),step_size)
-                end do
+
+              !!!!!! 
+              ! For double bonds in a planar environment (atom a OR atom b are in a planar environemnt)
+              !   - perpendicular vector to molecular plane
+              !   - orient FODs along this vector
+              !!!!!
+              if ((con_mat(a,b)==2).and.((is_planar_linear(a)==1).or.(is_planar_linear(b)==1))) then
                 !
-                ! 1/r calculation.
-                !
-                ave_dist2 = 0.0
-                do e = 1, con_mat(a,b)-1
-                  do f = e+1, con_mat(a,b)
-                    ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
-                                                        & pos1_up(a)%point_x_y_z(c,bond_count_up(a) - f,:))**2))
-                  end do
-                end do
-                !
-                ! In addition, evaluate the 1/r to all atoms the corresponding atom is bonded to (and to the atom itself) -> better symmetry
-                !
-                do g = 1,size(pos1_up) 
-                  if ((con_mat(a,g)) /= 0 .or. (con_mat(g,a) /= 0) .or. (g == a)) then
-                    do e = 1, con_mat(a,b)
-                      tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
-                                                            & pos1_up(g)%center_x_y_z(:))**2))
-                      if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
-                        do f = 1, 3
-                          do h = 1, 3
-                            do i = 1, 3
-                              if (sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - pos1_up(g)%center_x_y_z(:) + &
-                                           (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
-                                tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:)-pos1_up(g)%center_x_y_z(:)+&
-                                           (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
-                              end if
-                            end do
-                          end do
-                        end do
-                      end if
-                      ave_dist2 = ave_dist2 + 1.0D0/tmp_dist
-                    end do
-                  end if
-                  !
-                  ! In addition, use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
-                  !
-                  do j = 1,size(pos1_up)
-                    if ((con_mat(g,j)) /= 0 .or. (con_mat(j,g) /= 0)) then
-                      do e = 1, con_mat(a,b)
-                        tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
-                                                              & pos1_up(j)%center_x_y_z(:))**2))
-                        if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
-                          do f = 1, 3
-                            do h = 1, 3
-                              do i = 1, 3
-                                if (sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - pos1_up(j)%center_x_y_z(:) + &
-                                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
-                                  tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a)-e,:)-pos1_up(j)%center_x_y_z(:)+&
-                                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
-                                end if
-                              end do
-                            end do
-                          end do
-                        end if
-                        ave_dist2 = ave_dist2 + 1.0D0/tmp_dist
-                      end do
-                    end if
-                  end do
-                  ! END NEW
-                end do
+                ! get cross product of two vectors to adjacent atoms -> cross product will give a perpendicular vector
                 ! 
-                ! Keep configuration?
+                allocate(tmp_vectors(2,size(pos1_up)))
+                tmp_vectors(1,:) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+                tmp_vectors(2,:) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+                counter = 0
                 !
-                if (ave_dist2 < ave_dist1) then
-                  do f = 1, con_mat(a,b)
-                    pos2_up(a)%point_x_y_z(c,bond_count_up(a)-f,:) = pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)
-                  end do
-                  ave_dist1 = ave_dist2
+                ! Distinguish between which center is in a planar environment
+                !
+                if (is_planar_linear(a)==1) then
+                  loop21: do d = 1, size(pos1_up)                                                                    ! for each other atom!
+                    if (con_mat(a,d) /= 0) then                                                                      ! if there is a bond between atom a and atom b -> get bond vector
+                      counter = counter + 1
+                      tmp_vectors(counter,:) = (pos1_up(a)%center_x_y_z(:) - pos1_up(d)%center_x_y_z(:))
+                    end if
+                    if (counter == 2) then                                                                           ! two vectors for cross product
+                      tmp_vector(:) = tmp_vectors(1,:)                                                               ! define bond vector (around which multiple FODs will be rotated)
+                      !
+                      ! create normal vector. Cross product -> Perpendicular vector
+                      !
+                      perpendicular_vec(1) = tmp_vectors(1,2)*tmp_vectors(2,3) - tmp_vectors(1,3)*tmp_vectors(2,2)
+                      perpendicular_vec(2) = tmp_vectors(1,3)*tmp_vectors(2,1) - tmp_vectors(1,1)*tmp_vectors(2,3)
+                      perpendicular_vec(3) = tmp_vectors(1,1)*tmp_vectors(2,2) - tmp_vectors(1,2)*tmp_vectors(2,1)
+                      exit loop21
+                    end if
+                  end do loop21
+                !
+                ! If atom b is in the planar environment
+                !
                 else
-                  do f = 1, con_mat(a,b)
-                    pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:) = pos2_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)
-                  end do
+                  loop22: do d = 1, size(pos1_up)                                                                    ! for each other atom!
+                    if (con_mat(b,d) /= 0) then                                                                      ! if there is a bond between atom a and atom b -> get bond vector
+                      counter = counter + 1
+                      tmp_vectors(counter,:) = (pos1_up(b)%center_x_y_z(:) - pos1_up(d)%center_x_y_z(:))
+                    end if
+                    if (counter == 2) then                                                                           ! two vectors for cross product
+                      tmp_vector(:) = tmp_vectors(1,:)                                                               ! define bond vector (around which multiple FODs will be rotated)
+                      !
+                      ! create normal vector. Cross product -> Perpendicular vector
+                      !
+                      perpendicular_vec(1) = tmp_vectors(1,2)*tmp_vectors(2,3) - tmp_vectors(1,3)*tmp_vectors(2,2)
+                      perpendicular_vec(2) = tmp_vectors(1,3)*tmp_vectors(2,1) - tmp_vectors(1,1)*tmp_vectors(2,3)
+                      perpendicular_vec(3) = tmp_vectors(1,1)*tmp_vectors(2,2) - tmp_vectors(1,2)*tmp_vectors(2,1)
+                      exit loop22
+                    end if
+                  end do loop22
                 end if
-              end do
+                !
+                ! normalize vector
+                !
+                perpendicular_vec(:) = perpendicular_vec(:)/sqrt(sum(perpendicular_vec(:)**2))
+                ! 
+                ! assign center for FOD generation.
+                !
+                pos1_up(a)%point_x_y_z(c,bond_count_up(a)-1,:) = bond_center(:) + &
+                        & pos1_up(a)%r_theta_phi(c,bond_count_up(a)-1,1)*scale_r*perpendicular_vec(:)
+                pos1_up(a)%point_x_y_z(c,bond_count_up(a)-2,:) = bond_center(:) - &
+                        & pos1_up(a)%r_theta_phi(c,bond_count_up(a)-2,1)*scale_r*perpendicular_vec(:)
+                deallocate(tmp_vectors)
+
+              !
+              ! Other than double bond in planar environment (e.g., SO2)
+              !
+              else
+                !
+                ! Rotate the perpendicular vector of the structural motif into the bond_vector -> perpendicular to the bond axis
+                !
+                ! Get rotation matrix
+                !
+                call create_rotMat_vec1_into_vec2(full_rot,perpendicular_vec_motif,bond_vector)
+                !
+                ! Rotate all points
+                !
+                do f = 1, con_mat(a,b)
+                  call rotate_pos(full_rot,pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:),&
+                               bond_center,pos2_up(a)%point_x_y_z(c,bond_count_up(a)-f,:))
+                  pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:) = pos2_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)  ! restore the pos1 array
+                end do
+              end if
+
+              ! DO NOT ROTATE THEM ANY FURTHER !!
+
+
+              !!!! Rotate the point around the bond vector (bond axis).
+              !!!!
+              !!!ave_dist1 = 100000.0
+              !!!do d = 1, cycles
+              !!!  do f = 1, con_mat(a,b)
+              !!!    pos2_up(a)%point_x_y_z(c,bond_count_up(a)-f,:) = pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)      ! store original positions
+              !!!    call rotate_around_axis(bond_vector,bond_center,pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:),step_size)
+              !!!  end do
+              !!!  !
+              !!!  ! 1/r calculation.
+              !!!  !
+              !!!  ave_dist2 = 0.0
+              !!!  do e = 1, con_mat(a,b)-1
+              !!!    do f = e+1, con_mat(a,b)
+              !!!      ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
+              !!!                                          & pos1_up(a)%point_x_y_z(c,bond_count_up(a) - f,:))**2))
+              !!!    end do
+              !!!  end do
+              !!!  !
+              !!!  ! In addition, evaluate the 1/r to all atoms the corresponding atom is bonded to (and to the atom itself) -> better symmetry
+              !!!  !
+              !!!  do g = 1,size(pos1_up) 
+              !!!    if ((con_mat(a,g)) /= 0 .or. (con_mat(g,a) /= 0) .or. (g == a)) then
+              !!!      do e = 1, con_mat(a,b)
+              !!!        tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
+              !!!                                              & pos1_up(g)%center_x_y_z(:))**2))
+              !!!        if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
+              !!!          do f = 1, 3
+              !!!            do h = 1, 3
+              !!!              do i = 1, 3
+              !!!                if (sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - pos1_up(g)%center_x_y_z(:) + &
+              !!!                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
+              !!!                  tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:)-pos1_up(g)%center_x_y_z(:)+&
+              !!!                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
+              !!!                end if
+              !!!              end do
+              !!!            end do
+              !!!          end do
+              !!!        end if
+              !!!        ave_dist2 = ave_dist2 + 1.0D0/tmp_dist
+              !!!      end do
+              !!!    end if
+              !!!    !
+              !!!    ! In addition, use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
+              !!!    !
+              !!!    do j = 1,size(pos1_up)
+              !!!      if ((con_mat(g,j)) /= 0 .or. (con_mat(j,g) /= 0)) then
+              !!!        do e = 1, con_mat(a,b)
+              !!!          tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
+              !!!                                                & pos1_up(j)%center_x_y_z(:))**2))
+              !!!          if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
+              !!!            do f = 1, 3
+              !!!              do h = 1, 3
+              !!!                do i = 1, 3
+              !!!                  if (sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - pos1_up(j)%center_x_y_z(:) + &
+              !!!                               (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
+              !!!                    tmp_dist = sqrt(sum((pos1_up(a)%point_x_y_z(c,bond_count_up(a)-e,:)-pos1_up(j)%center_x_y_z(:)+&
+              !!!                               (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
+              !!!                  end if
+              !!!                end do
+              !!!              end do
+              !!!            end do
+              !!!          end if
+              !!!          ave_dist2 = ave_dist2 + 1.0D0/tmp_dist
+              !!!        end do
+              !!!      end if
+              !!!    end do
+              !!!    ! END NEW
+              !!!  end do
+              !!!  ! 
+              !!!  ! Keep configuration?
+              !!!  !
+              !!!  if (ave_dist2 < ave_dist1) then
+              !!!    do f = 1, con_mat(a,b)
+              !!!      pos2_up(a)%point_x_y_z(c,bond_count_up(a)-f,:) = pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)
+              !!!    end do
+              !!!    ave_dist1 = ave_dist2
+              !!!  else
+              !!!    do f = 1, con_mat(a,b)
+              !!!      pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:) = pos2_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)
+              !!!    end do
+              !!!  end if
+              !!!end do
               !
               ! analyze whether atoms is in an linear environemnt.
               ! If so -> minimize 1/r to neighbouring FODs via rotations
               !
               if (is_planar_linear(a) == 2) then
+                ave_dist1 = 10000000.0
                 do d = 1, cycles
                   ave_dist2 = 0.0
                   !
                   ! generate rotation matrix for bond rotation. Rotate positions
+                  ! Rotate ALL positions in the same way
                   !
                   call create_rotMat_bond(full_rot,bond_vector,step_size)
                   do e = 1, con_mat(a,b)
@@ -1577,16 +1655,17 @@ else                                                                           !
                   end if
                 end do
               end if
+
               !
               ! If same number of UP and DN FODs in the bond -> just pair them right here (regarding the respective other atoms!)
               !
-              if (con_mat(a,b) == con_mat(b,a)) then 
+              if (con_mat(a,b) == con_mat(b,a)) then
                 do f = 1, con_mat(a,b)
                   g = pos1_dn(b)%n_shells
                   pos1_dn(b)%point_x_y_z(g,bond_count_dn(b),:) = pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)
                   bond_count_dn(b) = bond_count_dn(b) + 1
                 end do
-             end if
+              end if
 
             !!!!!!!!!!!!!!
             ! DN CHANNEL !
@@ -1597,101 +1676,196 @@ else                                                                           !
               else
                 do f = 1, con_mat(a,b)
                   c = pos1_dn(a)%n_shells                                       ! valence shell DN
-                  pos1_dn(a)%point_x_y_z(c,bond_count_dn(a),:) = &
-                  & bond_center(:) + perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(c,bond_count_dn(a),1)*scale_r         ! initial pos of UP channel. To be rotated around the bond axis
+                  ! 
+                  ! get bond FODs via structural motifs
+                  ! Rotate them into bond_vector to have them perpendicular to the bond axis
+                  ! Use different structual motifs than for core FODs, which will be different from 4 points on
+                  ! Get perpendicular vector corresponding to the structural motif -> use this to rotate the motif perpendicular to 
+                  ! the bond axis 
+                  !
+                  call struct_motif_bond_lone(con_mat(a,b),f,pos1_dn(a)%r_theta_phi(c,bond_count_dn(a),1)*scale_r, &
+                                              bond_center,pos1_dn(a)%point_x_y_z(c,bond_count_dn(a),:),perpendicular_vec_motif)
                   bond_count_dn(a) = bond_count_dn(a) + 1
                 end do
-                !
-                ! Rotate the point around the bond vector (bond axis). 
-                !
-                ave_dist1 = 100000.0
-                do d = 1, cycles
-                  do f = 1, con_mat(a,b)
-                    pos2_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:) = pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:)    ! store original pos
-                    call rotate_around_axis(bond_vector,bond_center, & 
-                                          & pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:),step_size)
-                  end do
+                !!!!!! 
+                ! For double bonds in a planar environment (atom a OR atom b are in a planar environment)
+                !   - perpendicular vector to molecular plane
+                !   - orient FODs along this vector
+                !!!!!
+                if ((con_mat(a,b)==2).and.((is_planar_linear(a)==1).or.((is_planar_linear(b)==1)))) then
                   !
-                  ! 1/r calculation
+                  ! get cross product of two vectors to adjacent atoms -> cross product will give a perpendicular vector
+                  ! 
+                  allocate(tmp_vectors(2,size(pos1_dn)))
+                  tmp_vectors(1,:) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+                  tmp_vectors(2,:) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+                  counter = 0
                   !
-                  ave_dist2 = 0.0
-                  do e = 1, con_mat(a,b)-1
-                    do f = e+1, con_mat(a,b)
-                      ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
-                                              & pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - f,:))**2))
-                    end do
-                  end do
+                  ! Distinguish between which center is in a planar environment
                   !
-                  ! In addition, evaluate the 1/r to all atoms the corresponding atom is bonded to (and to the atom itself) -> better symmetry
-                  !
-                  do g = 1,size(pos1_dn)
-                    if ((con_mat(a,g)) /= 0 .or. (con_mat(g,a) /= 0) .or. (g == a)) then
-                      do e = 1, con_mat(a,b)
-                        tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
-                                                              & pos1_dn(g)%center_x_y_z(:))**2))
-                        if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
-                          do f = 1, 3
-                            do h = 1, 3
-                              do i = 1, 3
-                                if (sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - pos1_dn(g)%center_x_y_z(:) + &
-                                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
-                                  tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:)-pos1_dn(g)%center_x_y_z(:)+&
-                                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
-                                end if
-                              end do
-                            end do
-                          end do
-                        end if
-                        ave_dist2 = ave_dist2 + 1.0D0/tmp_dist  
-                      end do
-                    end if
-                    !
-                    ! In addition, use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
-                    !
-                    do j = 1,size(pos1_dn)
-                      if ((con_mat(g,j)) /= 0 .or. (con_mat(j,g) /= 0)) then
-
-                        do e = 1, con_mat(a,b)
-                          tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
-                                                                & pos1_dn(j)%center_x_y_z(:))**2))
-                          if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
-                            do f = 1, 3
-                              do h = 1, 3
-                                do i = 1, 3
-                                  if (sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - pos1_dn(j)%center_x_y_z(:) + &
-                                               (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
-                                    tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-e,:)-pos1_dn(j)%center_x_y_z(:)+&
-                                               (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
-                                  end if
-                                end do
-                              end do
-                            end do
-                          end if
-                          ave_dist2 = ave_dist2 + 1.0D0/tmp_dist
-                        end do
+                  if (is_planar_linear(a)==1) then
+                    loop23: do d = 1, size(pos1_dn)                                                                    ! for each other atom!
+                      if (con_mat(a,d) /= 0) then                                                                      ! if there is a bond between atom a and atom b -> get bond vector
+                        counter = counter + 1
+                        tmp_vectors(counter,:) = (pos1_dn(a)%center_x_y_z(:) - pos1_dn(d)%center_x_y_z(:))
                       end if
-                    end do
-                    ! END NEW
-                  end do
+                      if (counter == 2) then                                                                           ! two vectors for cross product
+                        tmp_vector(:) = tmp_vectors(1,:)                                                               ! define bond vector (around which multiple FODs will be rotated)
+                        !
+                        ! create normal vector. Cross product -> Perpendicular vector
+                        !
+                        perpendicular_vec(1) = tmp_vectors(1,2)*tmp_vectors(2,3) - tmp_vectors(1,3)*tmp_vectors(2,2)
+                        perpendicular_vec(2) = tmp_vectors(1,3)*tmp_vectors(2,1) - tmp_vectors(1,1)*tmp_vectors(2,3)
+                        perpendicular_vec(3) = tmp_vectors(1,1)*tmp_vectors(2,2) - tmp_vectors(1,2)*tmp_vectors(2,1)
+                        exit loop23
+                      end if
+                    end do loop23
                   !
-                  ! Keep configuration? 
+                  ! If atom b is in the planar environment
                   !
-                  if (ave_dist2 < ave_dist1) then
-                    do f = 1, con_mat(a,b)
-                      pos2_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:) = pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:)
-                    end do
-                    ave_dist1 = ave_dist2
                   else
-                    do f = 1, con_mat(a,b)
-                      pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:) = pos2_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:)
-                    end do
+                    loop24: do d = 1, size(pos1_dn)                                                                    ! for each other atom!
+                      if (con_mat(b,d) /= 0) then                                                                      ! if there is a bond between atom a and atom b -> get bond vector
+                        counter = counter + 1
+                        tmp_vectors(counter,:) = (pos1_dn(b)%center_x_y_z(:) - pos1_dn(d)%center_x_y_z(:))
+                      end if
+                      if (counter == 2) then                                                                           ! two vectors for cross product
+                        tmp_vector(:) = tmp_vectors(1,:)                                                               ! define bond vector (around which multiple FODs will be rotated)
+                        !
+                        ! create normal vector. Cross product -> Perpendicular vector
+                        !
+                        perpendicular_vec(1) = tmp_vectors(1,2)*tmp_vectors(2,3) - tmp_vectors(1,3)*tmp_vectors(2,2)
+                        perpendicular_vec(2) = tmp_vectors(1,3)*tmp_vectors(2,1) - tmp_vectors(1,1)*tmp_vectors(2,3)
+                        perpendicular_vec(3) = tmp_vectors(1,1)*tmp_vectors(2,2) - tmp_vectors(1,2)*tmp_vectors(2,1)
+                        exit loop24
+                      end if
+                    end do loop24
                   end if
-                end do
+                  !
+                  ! normalize vector
+                  !
+                  perpendicular_vec(:) = perpendicular_vec(:)/sqrt(sum(perpendicular_vec(:)**2))
+                  ! 
+                  ! assign center for FOD generation. Average the radii of both atoms
+                  !
+                  pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-1,:) = bond_center(:) + &
+                          & pos1_dn(a)%r_theta_phi(c,bond_count_dn(a)-1,1)*scale_r*perpendicular_vec(:)
+                  pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-2,:) = bond_center(:) - &
+                          & pos1_dn(a)%r_theta_phi(c,bond_count_dn(a)-2,1)*scale_r*perpendicular_vec(:)
+                  deallocate(tmp_vectors)
+                !
+                ! Other than double bond in a planar environment
+                !
+                else
+                  !
+                  ! Rotate the perpendicular vector of the structural motif into the bond_vector -> perpendicular to the bond axis
+                  !
+                  ! Get rotation matrix
+                  !
+                  call create_rotMat_vec1_into_vec2(full_rot,perpendicular_vec_motif,bond_vector)
+                  !
+                  ! Rotate all points
+                  !
+                  do f = 1, con_mat(a,b)
+                    call rotate_pos(full_rot,pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:),&
+                                 bond_center,pos2_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:))
+                    pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:) = pos2_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:)  ! restore the pos1 array
+                  end do
+                end if                  
+
+
+                !!!!
+                !!!! Rotate the point around the bond vector (bond axis). 
+                !!!!
+                !!!ave_dist1 = 100000.0
+                !!!do d = 1, cycles
+                !!!  do f = 1, con_mat(a,b)
+                !!!    pos2_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:) = pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:)    ! store original pos
+                !!!    call rotate_around_axis(bond_vector,bond_center, & 
+                !!!                          & pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:),step_size)
+                !!!  end do
+                !!!  !
+                !!!  ! 1/r calculation
+                !!!  !
+                !!!  ave_dist2 = 0.0
+                !!!  do e = 1, con_mat(a,b)-1
+                !!!    do f = e+1, con_mat(a,b)
+                !!!      ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
+                !!!                              & pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - f,:))**2))
+                !!!    end do
+                !!!  end do
+                !!!  !
+                !!!  ! In addition, evaluate the 1/r to all atoms the corresponding atom is bonded to (and to the atom itself) -> better symmetry
+                !!!  !
+                !!!  do g = 1,size(pos1_dn)
+                !!!    if ((con_mat(a,g)) /= 0 .or. (con_mat(g,a) /= 0) .or. (g == a)) then
+                !!!      do e = 1, con_mat(a,b)
+                !!!        tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
+                !!!                                              & pos1_dn(g)%center_x_y_z(:))**2))
+                !!!        if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
+                !!!          do f = 1, 3
+                !!!            do h = 1, 3
+                !!!              do i = 1, 3
+                !!!                if (sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - pos1_dn(g)%center_x_y_z(:) + &
+                !!!                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
+                !!!                  tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:)-pos1_dn(g)%center_x_y_z(:)+&
+                !!!                             (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
+                !!!                end if
+                !!!              end do
+                !!!            end do
+                !!!          end do
+                !!!        end if
+                !!!        ave_dist2 = ave_dist2 + 1.0D0/tmp_dist  
+                !!!      end do
+                !!!    end if
+                !!!    !
+                !!!    ! In addition, use the atoms which the bonded atom is bonded to as well -> more robust. I.e. include all atoms in con_mat(g,:)
+                !!!    !
+                !!!    do j = 1,size(pos1_dn)
+                !!!      if ((con_mat(g,j)) /= 0 .or. (con_mat(j,g) /= 0)) then
+
+                !!!        do e = 1, con_mat(a,b)
+                !!!          tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - &
+                !!!                                                & pos1_dn(j)%center_x_y_z(:))**2))
+                !!!          if (periodic) then                                                     ! In a peridoic system, take cell vectors into account
+                !!!            do f = 1, 3
+                !!!              do h = 1, 3
+                !!!                do i = 1, 3
+                !!!                  if (sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a) - e,:) - pos1_dn(j)%center_x_y_z(:) + &
+                !!!                               (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2)) < tmp_dist) then
+                !!!                    tmp_dist = sqrt(sum((pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-e,:)-pos1_dn(j)%center_x_y_z(:)+&
+                !!!                               (f-2)*cell_a(:) + (h-2)*cell_b(:) + (i-2)*cell_c(:))**2))
+                !!!                  end if
+                !!!                end do
+                !!!              end do
+                !!!            end do
+                !!!          end if
+                !!!          ave_dist2 = ave_dist2 + 1.0D0/tmp_dist
+                !!!        end do
+                !!!      end if
+                !!!    end do
+                !!!    ! END NEW
+                !!!  end do
+                !!!  !
+                !!!  ! Keep configuration? 
+                !!!  !
+                !!!  if (ave_dist2 < ave_dist1) then
+                !!!    do f = 1, con_mat(a,b)
+                !!!      pos2_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:) = pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:)
+                !!!    end do
+                !!!    ave_dist1 = ave_dist2
+                !!!  else
+                !!!    do f = 1, con_mat(a,b)
+                !!!      pos1_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:) = pos2_dn(a)%point_x_y_z(c,bond_count_dn(a)-f,:)
+                !!!    end do
+                !!!  end if
+                !!!end do
                 !
                 ! analyze whether atoms is in an linear environemnt.
                 ! If so -> minimize 1/r to neighbouring FODs via rotations
                 !
                 if (is_planar_linear(a) == 2) then
+                  ave_dist1 = 10000000.0
                   do d = 1, cycles
                     ave_dist2 = 0.0
                     !
@@ -1772,16 +1946,16 @@ else                                                                           !
 
 
 
-
-
-
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!! 2. get lone FODs !!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! Idea: get all bond vectors to a given atom. Sum them up, normalize the resulting vector => In the opposite direction of this vector is were the lone FODs will be (at least in the way how the bond vectors are defined)
+!
+! Idea: get all bond vectors to a given atom. Sum them up, normalize the resulting vector 
+! => In the opposite direction of this vector, the lone FODs will be (at least in the way how the bond vectors are defined)
 ! Optimize the lone FODs in the same way as the bond FODs
 ! If an atom has no bonds -> optimize the number of lone FODs individually
+!
+
   do a = 1, size(pos1_up)                                                      ! for each atom
     if (sum(lone_fods(a,:)) == 0) then                                         ! if there are no lone FODs -> skip everything else
       continue
@@ -1794,33 +1968,44 @@ else                                                                           !
         ! UP CHANNEL !
         !!!!!!!!!!!!!!
         !
+        ! Use structual motifs instead of getting FODs via MC
+        !
+        b = pos1_up(a)%n_shells                                                       ! valence shell UP
+        d = 0
+        do c = pos1_up(a)%n_points(b)-lone_fods(a,1)+1, pos1_up(a)%n_points(b)      ! lone FODs only
+          d = d + 1
+          ! 
+          ! get lone FODs via structural motifs
+          ! Here, Use same structual motifs than for core FODs
+          !
+          call struct_motif(lone_fods(a,1),d,pos1_up(a)%r_theta_phi(b,c,1)*scale_r, &
+                            pos1_up(a)%center_x_y_z,pos1_up(a)%point_x_y_z(b,c,:))
+        end do
+        !
         ! Rotate the point around the atom. Optimize with MC. 
         !
         ave_dist1_up = 100000.0
         do j = 1, cycles
+          !
+          ! Get a rotation matrix
+          ! Use one rotation matrix for ALL points -> keep symmetry
+          !
+          call create_rotMat(full_rot,step_size)
+          !
+          ! Rotate
+          !
           b = pos1_up(a)%n_shells
-          do c = pos1_up(a)%n_points(b)-lone_fods(a,1)+1, pos1_up(a)%n_points(b)                                       ! only lone FODs
-            call mc_step(pos1_up(a)%r_theta_phi(b,c,1:3), &
-                         pos1_up(a)%center_x_y_z(1:3),    &                                                            ! single MC step to change the pos
-                         pos2_up(a)%r_theta_phi(b,c,1:3), &
-                         pos2_up(a)%point_x_y_z(b,c,1:3), step_size)
+          do c = pos1_up(a)%n_points(b)-lone_fods(a,1)+1, pos1_up(a)%n_points(b)
+            call rotate_pos(full_rot, pos1_up(a)%point_x_y_z(b,c,:), pos1_up(a)%center_x_y_z, &
+                                      pos2_up(a)%point_x_y_z(b,c,:))
           end do
           !
           ! EVAL UP
-          ! 1/r calculation. UP channel. Lone FODs against each other only! And 1/r to all atoms to get symmetry right
+          ! 1/r calculation. UP channel. Lone FODs against all atoms to get symmetry right
           ! valence contributions only.
           ave_dist2_up = 0.0
           b = pos2_up(a)%n_shells
           do c = pos2_up(a)%n_points(b)-lone_fods(a,1)+1, pos2_up(a)%n_points(b)
-            do f = pos2_up(a)%n_points(b)-lone_fods(a,1)+1, pos2_up(a)%n_points(b)
-              if (c == f) then                                                                                         ! exclude evaluation of a point with itself
-                continue
-              else
-                ave_dist2_up = ave_dist2_up + &
-                   1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - pos2_up(a)%point_x_y_z(b,f,:))**2))
-              end if
-            end do
-
             do d = 1,size(pos1_up)                                                                                     ! Take the 1/r to all atoms -> better symmetry
               ave_dist2_up = ave_dist2_up + 1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(b,c,:) - &                            ! change '+' to '-' to place the lone FODs towards the other atoms
                                                         & pos1_up(d)%center_x_y_z(:))**2))
@@ -1856,38 +2041,52 @@ else                                                                           !
             pos1_dn(a)%r_theta_phi(g,i,:) = pos1_up(a)%r_theta_phi(b,c,:)
           end do
 
-          !!!!!!!!!!!!!!
-          ! DN CHANNEL !
-          !!!!!!!!!!!!!!
+        !!!!!!!!!!!!!!
+        ! DN CHANNEL !
+        !!!!!!!!!!!!!!
         else
           !
           ! Rotate the point around the atom. Optimize with MC. 
           !
-          ave_dist1_dn = 100000.0
+          !
+          ! Use structual motifs instead of getting FODs via MC
+          !
+          b = pos1_dn(a)%n_shells                                                       ! valence shell DN
+          d = 0
+          do c = pos1_dn(a)%n_points(b)-lone_fods(a,2)+1, pos1_dn(a)%n_points(b)      ! lone FODs only
+            d = d + 1
+            ! 
+            ! get lone FODs via structural motifs
+            ! Here, Use same structual motifs as for core FODs
+            !
+            call struct_motif(lone_fods(a,2),d,pos1_dn(a)%r_theta_phi(b,c,1)*scale_r, &
+                              pos1_dn(a)%center_x_y_z,pos1_dn(a)%point_x_y_z(b,c,:))
+          end do
+          !
+          ! Rotate the point around the atom. Optimize with MC. 
+          !
+          ave_dist1_up = 100000.0
           do j = 1, cycles
+            !
+            ! Get a rotation matrix
+            ! Use one rotation matrix for ALL points -> keep symmetry
+            !
+            call create_rotMat(full_rot,step_size)
+            !
+            ! Rotate
+            !
             b = pos1_dn(a)%n_shells
-            do c = pos1_dn(a)%n_points(b)-lone_fods(a,2)+1, pos1_dn(a)%n_points(b)                                     ! only lone FODs
-              call mc_step(pos1_dn(a)%r_theta_phi(b,c,1:3), &
-                           pos1_dn(a)%center_x_y_z(1:3),    &                                                          ! single MC step to change the pos
-                           pos2_dn(a)%r_theta_phi(b,c,1:3), &
-                           pos2_dn(a)%point_x_y_z(b,c,1:3), step_size)
+            do c = pos1_dn(a)%n_points(b)-lone_fods(a,2)+1, pos1_dn(a)%n_points(b)
+              call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(b,c,:), pos1_dn(a)%center_x_y_z, &
+                                        pos2_dn(a)%point_x_y_z(b,c,:))
             end do
             !
             ! EVAL DN
-            ! 1/r calculation. DN channel. Lone FODs against each other only! And 1/r to all atoms to get symmetry right
+            ! 1/r calculation. DN channel. Lone FODs against all atoms to get symmetry right
             ! valence contributions only.
             ave_dist2_dn = 0.0
             b = pos2_dn(a)%n_shells
             do c = pos2_dn(a)%n_points(b)-lone_fods(a,2)+1, pos2_dn(a)%n_points(b)
-              do f = pos2_dn(a)%n_points(b)-lone_fods(a,2)+1, pos2_dn(a)%n_points(b)
-                if (c == f) then                                                                                       ! exclude evaluation of a point with itself
-                  continue
-                else
-                  ave_dist2_dn = ave_dist2_dn + &
-                     1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - pos2_dn(a)%point_x_y_z(b,f,:))**2))
-                end if
-              end do
-
               do d = 1,size(pos1_dn)                                                                                    ! Take the 1/r to all atoms -> better symmetry
                 ave_dist2_dn = ave_dist2_dn + 1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(b,c,:) - &                           ! change '+' to '-' to place the lone FODs towards the other atoms
                                                           & pos1_dn(d)%center_x_y_z(:))**2))
@@ -1911,18 +2110,17 @@ else                                                                           !
           end do
         end if
 
-
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       ! If there are bonds to the specific atom ! 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       else
-        counter = 0             ! count how many bonds there are
+        counter = 0
         bond_vector(:) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)                                                   ! initialize bond vector
         do b = 1, size(pos1_up)                                                                                        ! for each other atom
           !
           ! get vector describing the bond. For each bond to an atom, as specified in con_mat
           !
-          if (con_mat(a,b) /= 0) then                                                                                  ! for different atoms which are bonded
+          if (con_mat(a,b) /= 0) then                                                                                  ! for different atoms which are bonded (UP and DN)
             counter = counter + 1
             !
             ! get vector describing all bonds
@@ -1941,17 +2139,15 @@ else                                                                           !
                   end do
                 end do
               end do
-              bond_vector(:) = bond_vector(:) + tmp_vector(:) 
+              bond_vector(:) = bond_vector(:) + tmp_vector(:)
             else                                                                                                       ! in case of no periodicity:
               bond_vector(:) = bond_vector(:) + (pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:))              ! vector from b to a
             end if
           end if
         end do
-
         !
         ! Check if the atom is in a planar or linear environment. If so -> lone FODs need to be out-of-plane
         !
-
         !
         ! Linear
         !
@@ -1988,9 +2184,9 @@ else                                                                           !
           end if
           deallocate(tmp_vectors)
         ! 
-        ! Planar
+        ! Planar and more than two bonds (like benzene, and excluding e.g. H2O)
         !
-        else if (is_planar_linear(a) == 1.and.(counter > 2)) then ! more than two bonds!
+        else if ((is_planar_linear(a)==1).and.(counter > 2)) then ! more than two bonds
           !
           ! get cross product of two vectors to adjacent atoms -> cross product will give a perpendicular vector
           ! 
@@ -2017,7 +2213,7 @@ else                                                                           !
           !
           ! normalize vector
           !
-          perpendicular_vec(:) = perpendicular_vec(:)/sqrt(sum(perpendicular_vec(:)**2)) 
+          perpendicular_vec(:) = perpendicular_vec(:)/sqrt(sum(perpendicular_vec(:)**2))
           ! 
           ! assign center for FOD generation
           !
@@ -2027,16 +2223,16 @@ else                                                                           !
             bond_center(:) = pos1_up(a)%center_x_y_z(:) + &
             & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*perpendicular_vec(:)*pos1_up(a)%r_theta_phi(f,g,1)   ! UP channel
             if ((lone_fods(a,1) == 1) .and. (lone_fods(a,2) == 0)) then                                      ! in case there is only exactly one lone FODs (none in the other spin channel)
-              bond_center(:) = pos1_up(a)%center_x_y_z(:) + perpendicular_vec(:)*pos1_up(a)%r_theta_phi(f,g,1)   
-            end if              
+              bond_center(:) = pos1_up(a)%center_x_y_z(:) + perpendicular_vec(:)*pos1_up(a)%r_theta_phi(f,g,1)
+            end if
           else if (lone_fods(a,2) > 0) then
             f = pos1_dn(a)%n_shells
             g = pos1_dn(a)%n_points(f)-lone_fods(a,2)+1
             bond_center(:) = pos1_dn(a)%center_x_y_z(:) + &
             & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(f,g,1)   ! DN
             if ((lone_fods(a,1) == 0) .and. (lone_fods(a,2) == 1)) then                                      ! in case there is only exactly one lone FODs (none in the other spin channel)
-              bond_center(:) = pos1_up(a)%center_x_y_z(:) + perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(f,g,1)   
-            end if              
+              bond_center(:) = pos1_up(a)%center_x_y_z(:) + perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(f,g,1)
+            end if
           end if
           deallocate(tmp_vectors)
         !
@@ -2075,6 +2271,7 @@ else                                                                           !
         end if
         !
         ! OVERWRITE ANY EXISTING pos2 -> currently necessary for next optimization
+        ! KT: is this still true? It doesn't really matter, but might be good to check
         !
         do b = 1, pos1_up(a)%n_shells                                                                        ! UP CHANNEL
           do c = 1, pos1_up(a)%n_points(b)
@@ -2087,13 +2284,13 @@ else                                                                           !
           end do
         end do
 
-
         !!!!!!!!!!!!!!!!!!!!!!
         ! MULTIPLE LONE FODs !
         !!!!!!!!!!!!!!!!!!!!!!
         ! Take perpendicular vector to the bond vector -> is perpendicular to the bond axis
         ! Use this vector (and a given radius) to place FODs perpendicular to the bond (vector applied to the lone-FOD center!)
         ! Rotate these points around the bond vector via MC to minimize their 1/r contribution
+        ! NEW: symmetrize with respect to bond FODs around if possible, i.e., if number of bond FODs matches the number of lone FODs
         !
         ! find a vector which is perpendicular to the bond vector
         !
@@ -2104,60 +2301,138 @@ else                                                                           !
 !!!!!!!!!!!!!!
         if (lone_fods(a,1) > 1) then                                                                                   ! UP CHANNEL
           b = pos1_up(a)%n_shells                                                                                      ! valence shell UP
+          d = 0
           do c = pos1_up(a)%n_points(b)-lone_fods(a,1)+1, pos1_up(a)%n_points(b)                                       ! UP FODs which are not in a bond, but are LONE -> only consider these FODs
-            pos1_up(a)%point_x_y_z(b,c,:) = &
-            & bond_center(:) + perpendicular_vec(:)*pos1_up(a)%r_theta_phi(b,c,1)*scale_r                              ! initial pos of UP channel. To be rotated around the bond axis. scale_r is a factor
+            d = d + 1
+            ! 
+            ! get lone FODs via structural motifs
+            ! Rotate them into bond_vector to have them perpendicular to the bond axis
+            ! Use different structual motifs than for core FODs, which will be different from 4 points on
+            ! Get perpendicular vector corresponding to the structural motif -> use this to rotate the motif perpendicular to 
+            ! the bond axis 
+            !
+            call struct_motif_bond_lone(lone_fods(a,1),d,pos1_up(a)%r_theta_phi(b,c,1)*scale_r, &
+                                        bond_center,pos1_up(a)%point_x_y_z(b,c,:),perpendicular_vec_motif)
           end do
           !
-          ! Rotate the point around the bond vector (bond axis).
+          ! Rotate the perpendicular vector of the structural motif into the bond_vector -> perpendicular to the bond axis
+          ! Get rotation matrix
           !
-          ave_dist1_up = 100000.0
-          do j = 1, cycles
-            do c = pos1_up(a)%n_points(b)-lone_fods(a,1)+1, pos1_up(a)%n_points(b)
-              pos2_up(a)%point_x_y_z(b,c,:) = pos1_up(a)%point_x_y_z(b,c,:)                                            ! store original pos
-              if (is_planar_linear(a) == 0) then                                                                       ! Not planar/linear. Rotate around bond_center
-                call rotate_around_axis(bond_vector,bond_center,pos1_up(a)%point_x_y_z(b,c,:),step_size)
-              else                                                                                                     ! planar/linear -> rotate around atom
-                call rotate_around_axis(bond_vector,pos1_up(a)%center_x_y_z,pos1_up(a)%point_x_y_z(b,c,:),step_size)
+          call create_rotMat_vec1_into_vec2(full_rot,perpendicular_vec_motif,bond_vector)
+          !
+          ! Rotate all points
+          !
+          do c = pos1_up(a)%n_points(b)-lone_fods(a,1)+1, pos1_up(a)%n_points(b)
+            call rotate_pos(full_rot,pos1_up(a)%point_x_y_z(b,c,:),&
+                         bond_center,pos2_up(a)%point_x_y_z(b,c,:))
+            pos1_up(a)%point_x_y_z(b,c,:) = pos2_up(a)%point_x_y_z(b,c,:)                                                ! restore the pos1 array
+          end do
+          !!!!!!!
+          ! If there are two bonds to an atoms AND it is planar (like H2O)
+          ! Place lone FODs perpendicular to that plane !
+          !!!!!!!
+          if ((is_planar_linear(a)==1).and.(counter==2).and.(lone_fods(a,1)==2)) then ! for exactly two bonds, two lone FODs and a planar situation
+            ! 
+            ! get cross product of two vectors to adjacent atoms -> cross product will give a perpendicular vector
+            ! 
+            allocate(tmp_vectors(2,3))
+            tmp_vectors(1,:) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+            tmp_vectors(2,:) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+            counter = 0
+            do c = 1, size(pos1_up)                                                                            ! for each other atom!
+              if (con_mat(a,c) /= 0) then                                                                      ! if there is a UP-bond between atom a and atom b -> get bond vector
+!!!                if (a < c) then                                                                                ! If it is an UP-FOD
+                counter = counter + 1
+                tmp_vectors(counter,:) = (pos1_up(a)%center_x_y_z(:) - pos1_up(c)%center_x_y_z(:))
+!!!                end if
               end if
             end do
             !
-            ! EVAL UP
-            ! 1/r calculation. UP. Lone FODs against the rest
-            ! valence contributions only.
-            ave_dist2_up = 0.0
-            b = pos1_up(a)%n_shells
+            ! create normal vector. Cross product -> Perpendicular vector
+            !
+            perpendicular_vec(1) = tmp_vectors(1,2)*tmp_vectors(2,3) - tmp_vectors(1,3)*tmp_vectors(2,2)
+            perpendicular_vec(2) = tmp_vectors(1,3)*tmp_vectors(2,1) - tmp_vectors(1,1)*tmp_vectors(2,3)
+            perpendicular_vec(3) = tmp_vectors(1,1)*tmp_vectors(2,2) - tmp_vectors(1,2)*tmp_vectors(2,1)
+            !
+            ! normalize vector
+            !
+            perpendicular_vec(:) = perpendicular_vec(:)/sqrt(sum(perpendicular_vec(:)**2))
+            ! 
+            ! assign FOD positions. 
+            !
             do c = pos1_up(a)%n_points(b)-lone_fods(a,1)+1, pos1_up(a)%n_points(b)
-              do d = 1, size(pos1_up)                                                                                  ! for all atoms
-                if ((con_mat(a,d) /= 0) .or. (con_mat(d,a) /= 0) .or. (a == d)) then                                   ! only evaluate 1/r for neighbouring atoms -> all which have a bond to the atom under observation. 
-                                                                                                                       ! and for the same atom too
-                  e = pos1_up(d)%n_shells
-                  do f = 1, pos1_up(d)%n_points(e)
-                    if ((a == d) .and. (b == e) .and. (c == f)) then                                                   ! exclude evaluation of a point with itself
-                      continue
-                    else
-! HERE: periodicity?
-                      ave_dist2_up = ave_dist2_up + &
-                         1.0D0/sqrt(sum((pos1_up(a)%point_x_y_z(b,c,:) - pos1_up(d)%point_x_y_z(e,f,:))**2))
-                    end if
-                  end do
+              if (c==pos1_up(a)%n_points(b)) then
+                pos1_up(a)%point_x_y_z(b,c,:) = bond_center(:) + &
+                & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*perpendicular_vec(:)*pos1_up(a)%r_theta_phi(b,c,1)
+              else
+                pos1_up(a)%point_x_y_z(b,c,:) = bond_center(:) - &
+                & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*perpendicular_vec(:)*pos1_up(a)%r_theta_phi(b,c,1)
+              end if
+            end do
+            deallocate(tmp_vectors)
+          
+          ! For any other situation
+          else            
+            !
+            ! Rotate the point around the bond vector (bond axis).
+            !
+            ave_dist1_up = 100000.0
+            do j = 1, cycles
+              !
+              ! Get a rotation matrix around the bond axis
+              ! Use one rotation matrix for ALL points -> keep symmetry
+              !
+              call create_rotMat_bond(full_rot,bond_vector,step_size)
+              !
+              ! Rotate
+              !
+              g = pos1_up(a)%n_shells
+              do c = pos1_up(a)%n_points(g)-lone_fods(a,1)+1, pos1_up(a)%n_points(g)
+                if (is_planar_linear(a) == 0) then                                                      ! Not planar/linear. Rotate around bond_center
+                  call rotate_pos(full_rot, pos1_up(a)%point_x_y_z(g,c,:), bond_center, &
+                                            pos2_up(a)%point_x_y_z(g,c,:))
+                else                                                                                    ! planar/linear -> rotate around atom
+                  call rotate_pos(full_rot, pos1_up(a)%point_x_y_z(g,c,:), pos1_up(a)%center_x_y_z, &
+                                            pos2_up(a)%point_x_y_z(g,c,:))
                 end if
               end do
-            end do
-            !
-            ! Keep configuration?
-            !
-            if (ave_dist2_up < ave_dist1_up) then
-              do c = pos1_up(a)%n_points(b)-lone_fods(a,1)+1, pos1_up(a)%n_points(b)
-                pos2_up(a)%point_x_y_z(b,c,:) = pos1_up(a)%point_x_y_z(b,c,:)
+              !
+              ! EVAL UP
+              ! 1/r calculation. UP. Lone FODs against the rest
+              ! valence contributions only.
+              ! Use pos2 for the FOD positions, not pos1!
+              !
+              ave_dist2_up = 0.0
+              g = pos1_up(a)%n_shells
+              do c = pos1_up(a)%n_points(g)-lone_fods(a,1)+1, pos1_up(a)%n_points(g)
+                do d = 1, size(pos1_up)                                                                  ! for all atoms
+                  if ((con_mat(a,d) /= 0) .or. (con_mat(d,a) /= 0) .or. (a == d)) then                   ! only evaluate 1/r for neighbouring atoms -> all which have a bond to the atom under observation. 
+                                                                                                         ! and for the same atom too
+                    e = pos1_up(d)%n_shells
+                    do f = 1, pos1_up(d)%n_points(e)
+                      if ((a == d) .and. (b == e) .and. (c == f)) then                                   ! exclude evaluation of a point with itself
+                        continue
+                      else
+                        ! HERE: periodicity?
+                        ave_dist2_up = ave_dist2_up + &
+                           1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(g,c,:) - pos1_up(d)%point_x_y_z(e,f,:))**2))
+                      end if
+                    end do
+                  end if
+                end do
               end do
-              ave_dist1_up = ave_dist2_up
-            else
-              do c = pos1_up(a)%n_points(b)-lone_fods(a,1)+1, pos1_up(a)%n_points(b)
-                pos1_up(a)%point_x_y_z(b,c,:) = pos2_up(a)%point_x_y_z(b,c,:)
-              end do
-            end if
-          end do
+              !
+              ! Keep configuration?
+              !
+              if (ave_dist2_up < ave_dist1_up) then
+                do c = pos1_up(a)%n_points(g)-lone_fods(a,1)+1, pos1_up(a)%n_points(g)
+                  pos1_up(a)%point_x_y_z(g,c,:) = pos2_up(a)%point_x_y_z(g,c,:)
+                end do
+                ave_dist1_up = ave_dist2_up
+              end if
+            end do  
+
+          end if    ! end planar & 2 bonds
           !
           ! If same number of UP and DN FODs in the lone pair -> just pair them right here (regarding the respective other atoms!)
           ! it is ugly right now, but it works
@@ -2173,6 +2448,7 @@ else                                                                           !
           end if
         end if
 
+
 !!!!!!!!!!!!!!
 ! DN CHANNEL !
 !!!!!!!!!!!!!!
@@ -2180,61 +2456,140 @@ else                                                                           !
           if (lone_fods(a,1) == lone_fods(a,2)) then                                                                   ! same number of UP and DN lone FODs -> nothing to do (already paired)
             continue
           else
-            b = pos1_dn(a)%n_shells                                                                                    ! valence shell DN
-            do c = pos1_dn(a)%n_points(b)-lone_fods(a,2)+1, pos1_dn(a)%n_points(b)                                     ! DN FODs which are not in a bond, but are LONE -> only consider these FODs
-              pos1_dn(a)%point_x_y_z(b,c,:) = &
-              & bond_center(:) + perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(b,c,1)*scale_r                            ! initial pos of DN channel. To be rotated around the bond axis. 
+            b = pos1_dn(a)%n_shells                                                                                      ! valence shell DN
+            d = 0
+            do c = pos1_dn(a)%n_points(b)-lone_fods(a,2)+1, pos1_dn(a)%n_points(b)                                       ! DN FODs which are not in a bond, but are LONE -> only consider these FODs
+              d = d + 1
+              ! 
+              ! get lone FODs via structural motifs
+              ! Rotate them into bond_vector to have them perpendicular to the bond axis
+              ! Use different structual motifs than for core FODs, which will be different from 4 points on
+              ! Get perpendicular vector corresponding to the structural motif -> use this to rotate the motif perpendicular to 
+              ! the bond axis 
+              !
+              call struct_motif_bond_lone(lone_fods(a,2),d,pos1_dn(a)%r_theta_phi(b,c,1)*scale_r, &
+                                          bond_center,pos1_dn(a)%point_x_y_z(b,c,:),perpendicular_vec_motif)
             end do
             !
-            ! Rotate the point around the bond vector (bond axis). 
+            ! Rotate the perpendicular vector of the structural motif into the bond_vector -> perpendicular to the bond axis
+            ! Get rotation matrix
             !
-            ave_dist1_dn = 100000.0
-            do j = 1, cycles
-              do c = pos1_dn(a)%n_points(b)-lone_fods(a,2)+1, pos1_dn(a)%n_points(b)
-                pos2_dn(a)%point_x_y_z(b,c,:) = pos1_dn(a)%point_x_y_z(b,c,:)                                          ! store original pos
-                if (is_planar_linear(a) == 0) then                                                                     ! Not planar/linear. Rotate around bond_center
-                  call rotate_around_axis(bond_vector,bond_center,pos1_dn(a)%point_x_y_z(b,c,:),step_size)
-                else                                                                                                   ! planar/linear -> rotate around atom
-                  call rotate_around_axis(bond_vector,pos1_dn(a)%center_x_y_z,pos1_dn(a)%point_x_y_z(b,c,:),step_size) 
+            call create_rotMat_vec1_into_vec2(full_rot,perpendicular_vec_motif,bond_vector)
+            !
+            ! Rotate all points
+            !
+            do c = pos1_dn(a)%n_points(b)-lone_fods(a,2)+1, pos1_dn(a)%n_points(b)
+              call rotate_pos(full_rot,pos1_dn(a)%point_x_y_z(b,c,:),&
+                           bond_center,pos2_dn(a)%point_x_y_z(b,c,:))
+              pos1_dn(a)%point_x_y_z(b,c,:) = pos2_dn(a)%point_x_y_z(b,c,:)                                                ! restore the pos1 array
+            end do
+            !!!!!!!
+            ! If there are two bonds to an atoms AND it is planar (like H2O)
+            ! Place lone FODs perpendicular to that plane !
+            !!!!!!!
+            if ((is_planar_linear(a)==1).and.(counter==2).and.(lone_fods(a,2)==2)) then ! for exactly two bonds, two lone FODs and a planar situation
+              ! 
+              ! get cross product of two vectors to adjacent atoms -> cross product will give a perpendicular vector
+              ! 
+              allocate(tmp_vectors(2,size(pos1_dn)))
+              tmp_vectors(1,:) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+              tmp_vectors(2,:) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+              counter = 0
+              do c = 1, size(pos1_dn)                                                                            ! for each other atom!
+                if (con_mat(a,c) /= 0) then                                                                      ! if there is a DN-bond between atom a and atom c -> get bond vector
+                  if (a > c) then                                                                                ! If it is an DN-FOD
+                    counter = counter + 1
+                    tmp_vectors(counter,:) = (pos1_dn(a)%center_x_y_z(:) - pos1_dn(c)%center_x_y_z(:))
+                  end if
                 end if
               end do
               !
-              ! EVAL DN
-              ! 1/r calculation. DN. Lone FODs against the rest
-              ! valence contributions only.
-              ave_dist2_dn = 0.0
-              b = pos1_dn(a)%n_shells
+              ! create normal vector. Cross product -> Perpendicular vector
+              !
+              perpendicular_vec(1) = tmp_vectors(1,2)*tmp_vectors(2,3) - tmp_vectors(1,3)*tmp_vectors(2,2)
+              perpendicular_vec(2) = tmp_vectors(1,3)*tmp_vectors(2,1) - tmp_vectors(1,1)*tmp_vectors(2,3)
+              perpendicular_vec(3) = tmp_vectors(1,1)*tmp_vectors(2,2) - tmp_vectors(1,2)*tmp_vectors(2,1)
+              !
+              ! normalize vector
+              !
+              perpendicular_vec(:) = perpendicular_vec(:)/sqrt(sum(perpendicular_vec(:)**2))
+              ! 
+              ! assign FOD positions. 
+              !
               do c = pos1_dn(a)%n_points(b)-lone_fods(a,2)+1, pos1_dn(a)%n_points(b)
-                do d = 1, size(pos1_dn)                                                                                ! for all atoms
-                  if ((con_mat(a,d) /= 0) .or. (con_mat(d,a) /= 0) .or. (a == d)) then                                 ! only evaluate 1/r for meighbouring atoms -> all which have a bond to the atom under observation. 
-                                                                                                                       ! and for the same atom too
-                    e = pos1_dn(d)%n_shells
-                    do f = 1, pos1_dn(d)%n_points(e)
-                      if ((a == d) .and. (b == e) .and. (c == f)) then                                                 ! exclude evaluation of a point with itself
-                        continue
-                      else
-! HERE: Periodicity?
-                        ave_dist2_dn = ave_dist2_dn + &
-                           1.0D0/sqrt(sum((pos1_dn(a)%point_x_y_z(b,c,:) - pos1_dn(d)%point_x_y_z(e,f,:))**2))
-                      end if
-                    end do
+                if (c==pos1_dn(a)%n_points(b)) then
+                  pos1_dn(a)%point_x_y_z(b,c,:) = bond_center(:) + &
+                  & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(b,c,1)
+                else
+                  pos1_dn(a)%point_x_y_z(b,c,:) = bond_center(:) - &
+                  & 1.0D0/((lone_fods(a,1)+lone_fods(a,2))/2.0D0)*perpendicular_vec(:)*pos1_dn(a)%r_theta_phi(b,c,1)
+                end if
+              end do
+              deallocate(tmp_vectors)
+           
+            ! For any other situation
+            else
+              !
+              ! Rotate the point around the bond vector (bond axis).
+              !
+              ave_dist1_dn = 100000.0
+              do j = 1, cycles
+                !
+                ! Get a rotation matrix around the bond axis
+                ! Use one rotation matrix for ALL points -> keep symmetry
+                !
+                call create_rotMat_bond(full_rot,bond_vector,step_size)
+                !
+                ! Rotate
+                !
+                g = pos1_dn(a)%n_shells
+                do c = pos1_dn(a)%n_points(g)-lone_fods(a,2)+1, pos1_dn(a)%n_points(g)
+                  if (is_planar_linear(a) == 0) then                                                      ! Not planar/linear. Rotate around bond_center
+                    call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(g,c,:), bond_center, &
+                                              pos2_dn(a)%point_x_y_z(g,c,:))
+                  else                                                                                    ! planar/linear -> rotate around atom
+                    call rotate_pos(full_rot, pos1_dn(a)%point_x_y_z(g,c,:), pos1_dn(a)%center_x_y_z, &
+                                              pos2_dn(a)%point_x_y_z(g,c,:))
                   end if
                 end do
+                !
+                ! EVAL DN
+                ! 1/r calculation. DN. Lone FODs against the rest
+                ! valence contributions only.
+                ! Use pos2 for the FOD positions, not pos1!
+                !
+                ave_dist2_dn = 0.0
+                g = pos1_dn(a)%n_shells
+                do c = pos1_dn(a)%n_points(g)-lone_fods(a,2)+1, pos1_dn(a)%n_points(g)
+                  do d = 1, size(pos1_up)                                                                  ! for all atoms
+                    if ((con_mat(a,d) /= 0) .or. (con_mat(d,a) /= 0) .or. (a == d)) then                   ! only evaluate 1/r for neighbouring atoms -> all which have a bond to the atom under observation. 
+                                                                                                           ! and for the same atom too
+                      e = pos1_dn(d)%n_shells
+                      do f = 1, pos1_dn(d)%n_points(e)
+                        if ((a == d) .and. (b == e) .and. (c == f)) then                                   ! exclude evaluation of a point with itself
+                          continue
+                        else
+                          ! HERE: periodicity?
+                          ave_dist2_dn = ave_dist2_dn + &
+                             1.0D0/sqrt(sum((pos2_dn(a)%point_x_y_z(g,c,:) - pos1_dn(d)%point_x_y_z(e,f,:))**2))
+                        end if
+                      end do
+                    end if
+                  end do
+                end do
+                !
+                ! Keep configuration?
+                !
+                if (ave_dist2_dn < ave_dist1_dn) then
+                  do c = pos1_dn(a)%n_points(g)-lone_fods(a,2)+1, pos1_dn(a)%n_points(g)
+                    pos1_dn(a)%point_x_y_z(g,c,:) = pos2_dn(a)%point_x_y_z(g,c,:)
+                  end do
+                  ave_dist1_dn = ave_dist2_dn
+                end if
+                          
+
               end do
-              !
-              ! Keep configuration?
-              !
-              if (ave_dist2_dn < ave_dist1_dn) then
-                do c = pos1_dn(a)%n_points(b)-lone_fods(a,2)+1, pos1_dn(a)%n_points(b)
-                  pos2_dn(a)%point_x_y_z(b,c,:) = pos1_dn(a)%point_x_y_z(b,c,:)
-                end do
-                ave_dist1_dn = ave_dist2_dn
-              else
-                do c = pos1_dn(a)%n_points(b)-lone_fods(a,2)+1, pos1_dn(a)%n_points(b)
-                  pos1_dn(a)%point_x_y_z(b,c,:) = pos2_dn(a)%point_x_y_z(b,c,:)
-                end do
-              end if
-            end do
+            end if
           end if
         end if 
       end if 
@@ -4774,6 +5129,65 @@ return
 end subroutine create_rotMat_bond
 
 
+subroutine create_rotMat_vec1_into_vec2(fullRotMat,vector1,vector2)
+! create a rotation matrix to rotate one vector into another -> now needed for bond FODs
+real(8), intent(in)  :: vector1(3)   ! 
+real(8), intent(in)  :: vector2(3)   ! bond axis
+real(8), intent(out) :: fullRotMat(3,3)
+real(8)              :: len_vector, cos_angle, angle
+real(8)              :: norm_1(3), norm_2(3),cross_prod(3)
+!
+! normalize vectors
+!
+len_vector = sqrt(vector1(1)**2 + vector1(2)**2 + vector1(3)**2)
+norm_1(1) = vector1(1)/len_vector
+norm_1(2) = vector1(2)/len_vector
+norm_1(3) = vector1(3)/len_vector
+len_vector = sqrt(vector2(1)**2 + vector2(2)**2 + vector2(3)**2)
+norm_2(1) = vector2(1)/len_vector
+norm_2(2) = vector2(2)/len_vector
+norm_2(3) = vector2(3)/len_vector
+!
+! get angle between vectors over dot_product. They are normalized -> not need to divide by their length!
+!
+cos_angle = dot_product(norm_1, norm_2) !/(sqrt(sum(vector1(:)**2))*sqrt(sum(vector2(:)**2)))  ! cos angle = dot_product/(len(1)*len(2))
+angle     = acos(cos_angle)
+!
+! if the two vector are identical -> unit matrix for rotation
+!
+if (abs(cos_angle) > 0.98) then
+  fullRotMat(1,1:3) = (/ real(1.0,8), real(0.0,8), real(0.0,8) /)
+  fullRotMat(2,1:3) = (/ real(0.0,8), real(1.0,8), real(0.0,8) /)
+  fullRotMat(3,1:3) = (/ real(0.0,8), real(0.0,8), real(1.0,8) /)
+else
+  !
+  ! If vector are not identical: get cross product -> rotation axis
+  !
+  cross_prod(1) = norm_1(2)*norm_2(3) - norm_1(3)*norm_2(2)
+  cross_prod(2) = norm_1(3)*norm_2(1) - norm_1(1)*norm_2(3)
+  cross_prod(3) = norm_1(1)*norm_2(2) - norm_1(2)*norm_2(1)
+  ! needs to be normalized
+  len_vector = sqrt(cross_prod(1)**2 + cross_prod(2)**2 + cross_prod(3)**2)
+  cross_prod(1) = cross_prod(1)/len_vector
+  cross_prod(2) = cross_prod(2)/len_vector
+  cross_prod(3) = cross_prod(3)/len_vector
+
+  fullRotMat(1,1) = cos(angle) + cross_prod(1)**2*(1 - cos(angle))
+  fullRotMat(1,2) = cross_prod(1)*cross_prod(2)*(1 - cos(angle)) - cross_prod(3)*sin(angle)
+  fullRotMat(1,3) = cross_prod(1)*cross_prod(3)*(1 - cos(angle)) + cross_prod(2)*sin(angle)
+  fullRotMat(2,1) = cross_prod(2)*cross_prod(1)*(1 - cos(angle)) + cross_prod(3)*sin(angle)
+  fullRotMat(2,2) = cos(angle) + cross_prod(2)**2*(1 - cos(angle))
+  fullRotMat(2,3) = cross_prod(2)*cross_prod(3)*(1 - cos(angle)) - cross_prod(1)*sin(angle)
+  fullRotMat(3,1) = cross_prod(3)*cross_prod(1)*(1 - cos(angle)) - cross_prod(2)*sin(angle)
+  fullRotMat(3,2) = cross_prod(3)*cross_prod(2)*(1 - cos(angle)) + cross_prod(1)*sin(angle)
+  fullRotMat(3,3) = cos(angle) + cross_prod(3)**2*(1 - cos(angle))
+end if
+
+return
+end subroutine create_rotMat_vec1_into_vec2
+
+
+
 subroutine rotate_pos(fullRotMat, xyz1, center_xyz, xyz2)
 real(8), intent(in)  :: fullRotMat(3,3), xyz1(3), center_xyz(3)
 real(8), intent(out) :: xyz2(3)
@@ -5198,6 +5612,65 @@ if (n_point_tot == 18) then
 end if
 return
 end subroutine struct_motif
+
+
+subroutine struct_motif_bond_lone(n_point_tot,n_point,radius,bond_pos,position_point,per_vec)
+! make initial structural motifs. For bond and lone  FODs
+! Orient them all along z (to maximize 1/r between them)
+! n_point_tot characterizes which structural motif shall be used (e.g. 4 = tetrahedron).
+! n_point specifies the point which shall be assigned
+! radius is the correpsonding radiius which shall be used (scaling of original structural motif)
+! bond_pos is the position of the bond center
+! position_point is the x,y,z coordinates of the point
+! per_vec is a vector perpendicular to the structural motif -> needed to orient the bond FODs perpendicular to the bond axis
+integer, intent(in)    :: n_point_tot, n_point
+real(8), intent(in)    :: radius
+real(8), intent(in)    :: bond_pos(3)
+real(8), intent(inout) :: position_point(3)
+real(8), intent(inout) :: per_vec(3)
+real(8), parameter     :: pi = 3.14159265358979323846
+real(8)                :: motif_1(3)
+real(8)                :: motif_2(2,3)
+real(8)                :: motif_3(3,3)
+real(8)                :: motif_4(4,3)
+
+! Motif 1 -> single point
+motif_1(1:3)    = (/ real(0.0,8), real(0.0,8), real(+1.0,8) /)
+! Motif 2 -> two points in a line
+motif_2(1,1:3) = (/ real(0.0,8), real(0.0,8), real(+1.0,8) /)
+motif_2(2,1:3) = (/ real(0.0,8), real(0.0,8), real(-1.0,8) /)
+! Motif 3 -> equiliteral triangle
+motif_3(1,1:3) = (/ real(0.0,8), real(0.0,8), real(+1.0,8) /)
+motif_3(2,1:3) = (/ real(sqrt(0.75),8), real(0.0,8), real(-0.5,8) /)
+motif_3(3,1:3) = (/ real(-1.0*sqrt(0.75),8), real(0.0,8), real(-0.5,8) /)
+! Motif 4 -> ttriangle + 1 in the middle
+motif_4(1,1:3) = (/ real(0.0,8), real(0.0,8), real(+1.0,8) /)
+motif_4(2,1:3) = (/ real(sqrt(0.75),8), real(0.0,8), real(-0.5,8) /)
+motif_4(3,1:3) = (/ real(-1.0*sqrt(0.75),8), real(0.0,8), real(-0.5,8) /)
+motif_4(4,1:3) = (/ real(0.0,8), real(0.0,8), real(0.0,8) /)
+
+! Single point
+if (n_point_tot == 1) then
+  position_point(:) = motif_1(1:3)*radius + bond_pos(1:3)
+  per_vec(1:3) = (/ real(+1.0,8), real(0.0,8), real(0.0,8) /)
+end if
+! Two points in a line
+if (n_point_tot == 2) then
+  position_point(:) = motif_2(n_point,1:3)*radius + bond_pos(1:3)
+  per_vec(1:3) = (/ real(+1.0,8), real(0.0,8), real(0.0,8) /)
+end if
+! Three points in an equiliteral triangle
+if (n_point_tot == 3) then
+  position_point(:) = motif_3(n_point,1:3)*radius + bond_pos(1:3)
+  per_vec(1:3) = (/ real(0.0,8), real(+1.0,8), real(0.0,8) /)
+end if
+! Triangle + 1 in the middle
+if (n_point_tot == 4) then
+  position_point(:) = motif_4(n_point,1:3)*radius + bond_pos(1:3)
+  per_vec(1:3) = (/ real(0.0,8), real(+1.0,8), real(0.0,8) /)
+end if
+return
+end subroutine struct_motif_bond_lone
 
 
 ! End module definition
