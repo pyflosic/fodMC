@@ -1,12 +1,9 @@
-<p align="center">
-  <img src="doc/images/logo_fodMC.png" width="400">
-</p>
-
 # fodMC - Fermi-orbital descriptor Monte-Carlo 
 [![license](https://img.shields.io/badge/license-APACHE2-green)](https://www.apache.org/licenses/LICENSE-2.0)
 [![language](https://img.shields.io/badge/language-Fortran90-red)](https://www.fortran90.org/)
 [![language](https://img.shields.io/badge/language-Python3-blue)](https://www.python.org/)
 [![version](https://img.shields.io/badge/version-1.0.0-lightgrey)](https://github.com/pyflosic/fodMC/blob/master/README.md)
+[![doi](https://img.shields.io/badge/DOI-10.5281/zenodo.3922473-lightgrey)](https://zenodo.org/record/3922473#.Xvor5aYpCCg)
 
 Main developer:  
 
