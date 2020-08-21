@@ -9,7 +9,7 @@ for m in mol:
     tmp_name = str(m).split('/')[-1].split('.')[0]
     t1 = time.time() 
     pyfodmc.get_guess(name=tmp_name)
-    t = time.time() - t1 
-    print('{}: {} s'.format(tmp_name+'.mol',t))
+    t2 = time.time() 
+    print('fodMC FOD generation for {}: {} s'.format(tmp_name+'.mol',t2-t1))
 
 
