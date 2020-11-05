@@ -15,19 +15,12 @@ python3 run.py
 - the file lists a number of possible examples
 
 
-#### xx_database_xx 
-
-- contains information about the atomic species 
-- different settings for all-electron and effective-core potentials (ecp)
-
-
 #### clean.sh 
 
 Usage   
 ``` should work with other shells too
 ./clean.sh
 ```
-
 
 #### Visualization 
 

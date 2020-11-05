@@ -1,7 +1,7 @@
 module fodmc_mod
   
 contains
-subroutine get_guess()
+subroutine get_guess(output_mode,output_name)
 
 !program fodMC
 
@@ -78,8 +78,13 @@ subroutine get_guess()
 ! Make analysis of planarity more robust. I.e. it should not depend on the order of the atoms.
 ! Once analyzed, check not just one atom, but both atoms involved in the bond. If either is in a planar environment ->
 ! move FODs out of plane. Thin about this!
+! 05. November 2020
+! Add output_mode and output_name for better output handling
 
 implicit none
+! Output handling
+character(len=*), intent(in)   :: output_mode, output_name                ! Mode for output (NRLMOL = CLUSTER+FRMORB, PyFLOSIC = name.xyz)
+
 ! new array structure: 3 real     (coordinates of center)
 !		       1 char	  (element symbols)
 !                      1 integer  (shell number)
@@ -176,6 +181,7 @@ allocate(seed(1:k))
 seed(:) = values(8)
 call random_seed(put=seed)
 ! end for random seed
+
 
 
 !!!!!!!!!
@@ -1024,61 +1030,66 @@ if (number_of_centers == 1) then
 !
 ! GENERATE CLUSTER AND FRMORB FILE for NRLMOL
 !
-    charge = real(element_number(1) - pseudo_charge(1) - sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
-    spin   = real(sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
-    open(unit=19,file='CLUSTER',status='unknown',action='write')
-    write(19,fmt='(A)') 'LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)'
-    write(19,fmt='(A)') 'NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)'
-    write(19,fmt='(A)') '1                            (NUMBER OF ATOMS)'
-    if ((pos1_up(1)%elements(3:5) == 'ECP') .or. (pos1_up(1)%elements(4:6) == 'ECP')) then
-      write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(1)%center_x_y_z(1:3)/units_factor, element_number(1), & 
-                   & '  ECP (R, Z, Pseudopotential)'
-    else
-      write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(1)%center_x_y_z(1:3)/units_factor, element_number(1), &
-                   & '  ALL (R, Z, ALL-ELECTRON)'
-    end if
-    write(19,fmt='(2(F6.3,2X),19X,A)') charge, spin, '(NET CHARGE AND NET SPIN)'
-    close(unit=19)
+    if (output_mode == 'NRLMOL') then
+      charge = real(element_number(1) - pseudo_charge(1) - sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
+      spin   = real(sum(pos1_up(1)%n_points(:)) - sum(pos1_dn(1)%n_points(:)),8)
+      open(unit=19,file='CLUSTER',status='unknown',action='write')
+      write(19,fmt='(A)') 'LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)'
+      write(19,fmt='(A)') 'NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)'
+      write(19,fmt='(A)') '1                            (NUMBER OF ATOMS)'
+      if ((pos1_up(1)%elements(3:5) == 'ECP') .or. (pos1_up(1)%elements(4:6) == 'ECP')) then
+        write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(1)%center_x_y_z(1:3)/units_factor, element_number(1), & 
+                     & '  ECP (R, Z, Pseudopotential)'
+      else
+        write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(1)%center_x_y_z(1:3)/units_factor, element_number(1), &
+                     & '  ALL (R, Z, ALL-ELECTRON)'
+      end if
+      write(19,fmt='(2(F6.3,2X),19X,A)') charge, spin, '(NET CHARGE AND NET SPIN)'
+      close(unit=19)
 
-    open(unit=19,file='FRMORB',status='unknown',action='write')
-    write(19,fmt='(I3,5X,I3)') sum(pos1_up(1)%n_points(:)), sum(pos1_dn(1)%n_points(:))
-    d = 1
-    do b = 1, pos1_up(d)%n_shells
-      do c = 1, pos1_up(d)%n_points(b)
-        write(19,fmt='(3(F13.8,2X))') pos1_up(d)%point_x_y_z(b,c,1:3)/units_factor
+      open(unit=19,file='FRMORB',status='unknown',action='write')
+      write(19,fmt='(I3,5X,I3)') sum(pos1_up(1)%n_points(:)), sum(pos1_dn(1)%n_points(:))
+      d = 1
+      do b = 1, pos1_up(d)%n_shells
+        do c = 1, pos1_up(d)%n_points(b)
+          write(19,fmt='(3(F13.8,2X))') pos1_up(d)%point_x_y_z(b,c,1:3)/units_factor
+        end do
       end do
-    end do
-    do b = 1, pos1_dn(d)%n_shells
-      do c = 1, pos1_dn(d)%n_points(b)
-        write(19,fmt='(3(F13.8,2X))') pos1_dn(d)%point_x_y_z(b,c,1:3)/units_factor
+      do b = 1, pos1_dn(d)%n_shells
+        do c = 1, pos1_dn(d)%n_points(b)
+          write(19,fmt='(3(F13.8,2X))') pos1_dn(d)%point_x_y_z(b,c,1:3)/units_factor
+        end do
       end do
-    end do
-    close(unit=19)
-
+      close(unit=19)
 !
 ! GENERATE Nuc_FOD.xyz. For PyFLOSIC
 !
-    open(unit=19,file='Nuc_FOD.xyz',status='unknown',action='write')
-    write (junk, '(I8)') size(pos1_up)+sum(pos1_up(1)%n_points(:))+sum(pos1_dn(1)%n_points(:))                       ! number of entries in the xyz file
-    write(19,fmt='(A)') adjustl(junk)
-    write(19,*) 'angstrom'
-    if (pos1_up(1)%elements(2:2)=='_'.or.pos1_up(1)%elements(2:2)=='') then
-      write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(1)%elements(1:1),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
+    else if (output_mode == 'PyFLOSIC') then
+      open(unit=19,file=output_name,status='unknown',action='write')
+      write (junk, '(I8)') size(pos1_up)+sum(pos1_up(1)%n_points(:))+sum(pos1_dn(1)%n_points(:))                       ! number of entries in the xyz file
+      write(19,fmt='(A)') adjustl(junk)
+      write(19,*) 'angstrom'
+      if (pos1_up(1)%elements(2:2)=='_'.or.pos1_up(1)%elements(2:2)=='') then
+        write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(1)%elements(1:1),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
+      else
+        write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(1)%elements(1:2),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor
+      end if
+      d = 1
+      do b = 1, pos1_up(d)%n_shells
+        do c = 1, pos1_up(d)%n_points(b)
+          write(19,fmt='(A4,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+        end do
+      end do
+      do b = 1, pos1_dn(d)%n_shells
+        do c = 1, pos1_dn(d)%n_points(b)
+          write(19,fmt='(A4,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+        end do
+      end do
+      close(unit=19)
+
     else
-      write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(1)%elements(1:2),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor
+      write(6,*) 'output_mode not recognized. Valid values are NRLMOL and PyFLOSIC'
     end if
-    d = 1
-    do b = 1, pos1_up(d)%n_shells
-      do c = 1, pos1_up(d)%n_points(b)
-        write(19,fmt='(A4,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
-      end do
-    end do
-    do b = 1, pos1_dn(d)%n_shells
-      do c = 1, pos1_dn(d)%n_points(b)
-        write(19,fmt='(A4,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
-      end do
-    end do
-    close(unit=19)
 
   end if
 
@@ -2149,7 +2160,7 @@ else                                                                           !
         ! Check if the atom is in a planar or linear environment. If so -> lone FODs need to be out-of-plane
         !
         !
-        ! Linear
+        ! Linear. Only the central atoms X (A-X-B) is defined as linear. the other are not assigned! Will be treated differently
         !
         if (is_planar_linear(a) == 2) then
           !
@@ -2620,6 +2631,7 @@ else                                                                           !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! CREATE CORE FODs. Minimize 1/r for core  !!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! 
   do a = 1, size(pos1_up)                                                      ! for each atom!
 
 ! NEW Use structural motifs
@@ -2726,6 +2738,7 @@ else                                                                           !
         end if
       end if
     end do    ! end MC cycle. final end UP channels
+
 
     !
     ! Get DN CHANNEL  
@@ -2834,9 +2847,60 @@ else                                                                           !
 ! END NEW
 
 ! For molecules -> not rotation of DN vs UP in the end. Shouldn't be necessary
+! Or maybe it is, for Linnett cores !
 
 
-
+! Sep. 4, 2020
+! KT: HERE rotate DN vs UP. Either align them (Lewis) or counter-align them (Linnett)
+!     We could make this a general idea, for bonds and lone as well
+! For same number of UP and DN: Either put ontop of each other, or inverted ?
+!    Use UP or DN, depending on which has a lower ave_dist1
+! Else: use MC (TBD)
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! Treat alignment of UP vs. DN. Core FODs !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!  do a = 1, size(pos1_up)                                                      ! for each atom!
+!!!    !
+!!!    ! Go through UP and DN channel  
+!!!    !
+!!!    do b = 1, pos1_up(a)%n_shells-1                                            ! Only core
+!!!      do d = 1, pos1_dn(a)%n_shells-1                                          ! Only core
+!!!        ! Only compare same shells
+!!!        if (b == d) then
+!!!          if (pos1_up(a)%n_points(b) == pos1_dn(a)%n_points(d)) then
+!!!            ! LEWIS. Put then at the same position
+!!!            ! If DN has lower Coulomb repulsion -> put UP to DN
+!!!            if (ave_dist1_dn < ave_dist1_up) then
+!!!              do c = 1, pos1_dn(a)%n_points(d)
+!!!                pos1_up(a)%point_x_y_z(b,c,:) = pos1_dn(a)%point_x_y_z(d,c,:)
+!!!              end do
+!!!            ! If UP has lower Coulomb repuslion -> put DN to UP
+!!!            else
+!!!              do c = 1, pos1_up(a)%n_points(b)
+!!!                pos1_dn(a)%point_x_y_z(d,c,:) = pos1_up(a)%point_x_y_z(b,c,:)
+!!!              end do
+!!!            end if
+!!!
+!!!!!!            ! LINNETT. Invert UP and DN.
+!!!!!!            ! If DN has lower Coulomb repulsion -> put UP inverted from DN
+!!!!!!            ! Respect the position of the of the corresponding atom
+!!!!!!            if (ave_dist1_dn < ave_dist1_up) then
+!!!!!!              do c = 1, pos1_dn(a)%n_points(d)
+!!!!!!                pos1_up(a)%point_x_y_z(b,c,:) = 2.0D0*pos1_up(a)%center_x_y_z(:) - pos1_dn(a)%point_x_y_z(d,c,:)
+!!!!!!              end do
+!!!!!!            ! If UP has lower Coulomb repuslion -> put DN to UP
+!!!!!!            else    
+!!!!!!              do c = 1, pos1_up(a)%n_points(b)
+!!!!!!                pos1_dn(a)%point_x_y_z(d,c,:) = 2.0D0*pos1_up(a)%center_x_y_z(:) - pos1_up(a)%point_x_y_z(b,c,:)
+!!!!!!              end do
+!!!!!!            end if
+!!!
+!!!          end if
+!!!        end if
+!!!      end do
+!!!    end do
+!!!  end do
 
 !!!!
 !!!!
@@ -2896,9 +2960,10 @@ else                                                                           !
 !!!!!!!!!!!!!!!!!!
 
 ! Point charge dipole evaluation !
-! Sum r_{FODs} - SUM r_{atoms}
+! Sum r_{FODs}*(-1) - <r_{atoms}>
 ! Calculate with respect to the center of all atoms
-! 
+! *-1 -> correct direction of dipole
+!
   cent_x = 0.0D0
   cent_y = 0.0D0
   cent_z = 0.0D0
@@ -2917,16 +2982,16 @@ else                                                                           !
   do a = 1, size(pos1_up)                                                       ! for all atoms
     do b = 1, pos1_up(a)%n_shells                                              ! and all UP-FODs
       do c = 1, pos1_up(a)%n_points(b)
-        dip_x = dip_x + pos1_up(a)%point_x_y_z(b,c,1) - cent_x
-        dip_y = dip_y + pos1_up(a)%point_x_y_z(b,c,2) - cent_y
-        dip_z = dip_z + pos1_up(a)%point_x_y_z(b,c,3) - cent_z
+        dip_x = dip_x - (pos1_up(a)%point_x_y_z(b,c,1) - cent_x)
+        dip_y = dip_y - (pos1_up(a)%point_x_y_z(b,c,2) - cent_y)
+        dip_z = dip_z - (pos1_up(a)%point_x_y_z(b,c,3) - cent_z)
       end do
     end do
     do b = 1, pos1_dn(a)%n_shells                                               ! all DN-FODs
       do c = 1, pos1_dn(a)%n_points(b)
-        dip_x = dip_x + pos1_dn(a)%point_x_y_z(b,c,1) - cent_x
-        dip_y = dip_y + pos1_dn(a)%point_x_y_z(b,c,2) - cent_y
-        dip_z = dip_z + pos1_dn(a)%point_x_y_z(b,c,3) - cent_z
+        dip_x = dip_x - (pos1_dn(a)%point_x_y_z(b,c,1) - cent_x)
+        dip_y = dip_y - (pos1_dn(a)%point_x_y_z(b,c,2) - cent_y)
+        dip_z = dip_z - (pos1_dn(a)%point_x_y_z(b,c,3) - cent_z)
       end do
     end do
   end do
@@ -3003,7 +3068,7 @@ else                                                                           !
 
 
   !
-  ! GENERATE CLUSTER AND FRMORB FILE for NRLMOL
+  ! GET GENERAL INFORMATION
   !
   charge     = 0.0
   spin       = 0.0
@@ -3017,69 +3082,78 @@ else                                                                           !
     counter_dn = counter_dn + sum(pos1_dn(a)%n_points(:))
   end do
 
-  open(unit=19,file='CLUSTER',status='unknown',action='write')
-  write(19,fmt='(A)') 'LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)'
-  write(19,fmt='(A)') 'NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)'
-  write(19,fmt='(I3,A)') size(pos1_up),'                            (NUMBER OF ATOMS)'
-  do a = 1, size(pos1_up)
-    if ((pos1_up(a)%elements(3:5) == 'ECP') .or. (pos1_up(a)%elements(4:6) == 'ECP')) then
-      write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(a)%center_x_y_z(1:3)/units_factor, element_number(a), &
-                                            & ' ECP (R, Z, Pseudopotential)'
-    else
-       write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(a)%center_x_y_z(1:3)/units_factor, element_number(a), &
-                                            & ' ALL (R, Z, ALL-ELECTRON)'
-    end if
-  end do
-  write(19,fmt='(2(F6.3,2X),19X,A)') charge, spin, '(NET CHARGE AND NET SPIN)'
-  close(unit=19)
+  !
+  ! GENERATE CLUSTER AND FRMORB FILE for NRLMOL
+  !
+  if (output_mode == 'NRLMOL') then
+    open(unit=19,file='CLUSTER',status='unknown',action='write')
+    write(19,fmt='(A)') 'LDA-PW91*LDA-PW91            (DF TYPE EXCHANGE*CORRELATION)'
+    write(19,fmt='(A)') 'NONE                         (TD, OH, IH, X, Y, XY, ... OR GRP)'
+    write(19,fmt='(I3,A)') size(pos1_up),'                            (NUMBER OF ATOMS)'
+    do a = 1, size(pos1_up)
+      if ((pos1_up(a)%elements(3:5) == 'ECP') .or. (pos1_up(a)%elements(4:6) == 'ECP')) then
+        write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(a)%center_x_y_z(1:3)/units_factor, element_number(a), &
+                                              & ' ECP (R, Z, Pseudopotential)'
+      else
+         write(19,fmt='(3(F13.8,2X),I3,1X,A)') pos1_up(a)%center_x_y_z(1:3)/units_factor, element_number(a), &
+                                              & ' ALL (R, Z, ALL-ELECTRON)'
+      end if
+    end do
+    write(19,fmt='(2(F6.3,2X),19X,A)') charge, spin, '(NET CHARGE AND NET SPIN)'
+    close(unit=19)
 
-  open(unit=19,file='FRMORB',status='unknown',action='write')
-  write(19,fmt='(I3,5X,I3)') counter_up, counter_dn
-  do a = 1, size(pos1_up)
-    do b = 1, pos1_up(a)%n_shells
-      do c = 1, pos1_up(a)%n_points(b)
-        write(19,fmt='(3(F13.8,2X))') pos1_up(a)%point_x_y_z(b,c,1:3)/units_factor
+    open(unit=19,file='FRMORB',status='unknown',action='write')
+    write(19,fmt='(I3,5X,I3)') counter_up, counter_dn
+    do a = 1, size(pos1_up)
+      do b = 1, pos1_up(a)%n_shells
+        do c = 1, pos1_up(a)%n_points(b)
+          write(19,fmt='(3(F13.8,2X))') pos1_up(a)%point_x_y_z(b,c,1:3)/units_factor
+        end do
       end do
     end do
-  end do
-  do a = 1, size(pos1_up)
-    do b = 1, pos1_dn(a)%n_shells
-      do c = 1, pos1_dn(a)%n_points(b)
-        write(19,fmt='(3(F13.8,2X))') pos1_dn(a)%point_x_y_z(b,c,1:3)/units_factor
+    do a = 1, size(pos1_up)
+      do b = 1, pos1_dn(a)%n_shells
+        do c = 1, pos1_dn(a)%n_points(b)
+          write(19,fmt='(3(F13.8,2X))') pos1_dn(a)%point_x_y_z(b,c,1:3)/units_factor
+        end do
       end do
     end do
-  end do
-  close(unit=19)
+    close(unit=19)
 
   !
   ! GENERATE Nuc_FOD.xyz. For PyFLOSIC
   !
-  open(unit=19,file='Nuc_FOD.xyz',status='unknown',action='write')
-  write (junk, '(I4)') size(pos1_up)+counter_up+counter_dn                     ! number of entries in the xyz file
-  write(19,fmt='(A)') adjustl(junk)
-  write(19,fmt='(A)') 'angstrom'
-  do a = 1, size(pos1_up)
-    if (pos1_up(a)%elements(2:2) == '_') then
-      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:1),pos1_up(a)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
-    else
-      write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:2),pos1_up(a)%center_x_y_z(1:3)*0.529177D0/units_factor
-    end if
-  end do
-  do a = 1, size(pos1_up)
-    do b = 1, pos1_up(a)%n_shells
-      do c = 1, pos1_up(a)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(a)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+  else if (output_mode == 'PyFLOSIC') then
+    open(unit=19,file=output_name,status='unknown',action='write')
+    write (junk, '(I4)') size(pos1_up)+counter_up+counter_dn                     ! number of entries in the xyz file
+    write(19,fmt='(A)') adjustl(junk)
+    write(19,fmt='(A)') 'angstrom'
+    do a = 1, size(pos1_up)
+      if (pos1_up(a)%elements(2:2) == '_') then
+        write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:1),pos1_up(a)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
+      else
+        write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:2),pos1_up(a)%center_x_y_z(1:3)*0.529177D0/units_factor
+      end if
+    end do
+    do a = 1, size(pos1_up)
+      do b = 1, pos1_up(a)%n_shells
+        do c = 1, pos1_up(a)%n_points(b)
+          write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(a)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+        end do
       end do
     end do
-  end do
-  do a = 1, size(pos1_up)
-    do b = 1, pos1_dn(a)%n_shells
-      do c = 1, pos1_dn(a)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(a)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+    do a = 1, size(pos1_up)
+      do b = 1, pos1_dn(a)%n_shells
+        do c = 1, pos1_dn(a)%n_points(b)
+          write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(a)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+        end do
       end do
     end do
-  end do
-  close(unit=19)
+    close(unit=19)
+
+  else
+    write(6,*) 'output_mode not recognized. Valid values are NRLMOL and PyFLOSIC'
+  end if
 
   deallocate(bond_pattern)
   deallocate(con_mat)
@@ -5681,5 +5755,6 @@ end module fodmc_mod
 
 program fodMC
   USE fodmc_mod
-  call get_guess()
+  call get_guess('PyFLOSIC','mol03.xyz')
+  !call get_guess('NRLMOL','')
 end program fodMC 

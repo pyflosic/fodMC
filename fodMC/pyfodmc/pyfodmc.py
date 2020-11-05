@@ -32,14 +32,14 @@ def rename_xyz(name):
     os.rename('Nuc_FOD.xyz',name+'.xyz')
 
 
-def get_guess(name='fodMC'):
+def get_guess(output_mode,output_name):
     # cp the database to the calculation folder 
     #get_database(input_file='xx_database_xx')
     #write_database()
     # magic to capture that output:
     # from http://stackoverflow.com/questions/977840/redirecting-fortran-called-via-f2py-output-in-python
     #      http://websrv.cs.umt.edu/isis/index.php/F2py_example
-    output_file = name + '.out' 
+    output_file = 'fodMC.out' 
     if os.path.exists(output_file):
         os.remove(output_file)
     # open outputfile
@@ -50,7 +50,7 @@ def get_guess(name='fodMC'):
     os.dup2(outfile, 1)
     # end magic
     # FORTAN call 
-    fodmc.fodmc_mod.get_guess()
+    fodmc.fodmc_mod.get_guess(output_mode,output_name)
     # restore the standard output file descriptor
     os.dup2(save, 1)
     # close the output file
@@ -61,7 +61,7 @@ def get_guess(name='fodMC'):
     # rm files which are not needed 
     clean_files()
     # rename output xyz
-    rename_xyz(name)
+    #rename_xyz(name)
 
 def write_pyfodmc_atoms(sys):
     #
@@ -98,7 +98,10 @@ if __name__ == "__main__":
         # creat input 
         write_pyfodmc_atoms(sys='Kr')
         # Fortran call 
-        fodmc.fodmc_mod.get_guess()
+
+        output_mode = ['NRLMOL','PyFLOSIC'][1]
+        output_name = ['',      'Kr_FODs.xyz'][1]
+        pyfodmc.get_guess(output_mode,output_name)
     
     def make_molecule():
         # Simple test for molecule
@@ -106,5 +109,8 @@ if __name__ == "__main__":
         con_mat = ['(1-2)-(2-2)','(1-3)-(2-2)\n']   
         write_pyfodmc_molecules(sys=sys,con_mat=con_mat)
         # Fortran call 
-        fodmc.fodmc_mod.get_guess()
+
+        output_mode = ['NRLMOL','PyFLOSIC'][1]
+        output_name = ['',      'SO2_FODs.xyz'][1]
+        fodmc.fodmc_mod.get_guess(output_mode,output_name)
     make_atom()
