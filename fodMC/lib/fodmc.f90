@@ -1398,10 +1398,10 @@ else                                                                           !
           if (con_mat(a,b) == 1) then
             if (a < b) then                                                    ! Add UP FOD
               c = pos1_up(a)%n_shells                                          ! valence shell UP
-              if (pos1_up(a)%elements(1:1) == 'H') then                        ! for H bonds -> place FOD closer to H (0.85*bond length)
+              if ((pos1_up(a)%elements(1:1) == 'H').and.(pos1_up(a)%elements(1:2).ne.'He')) then                        ! for H bonds -> place FOD closer to H (0.85*bond length)
                 pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = pos1_up(b)%center_x_y_z(:) + 0.85D0*bond_vector(:)
                 bond_count_up(a) = bond_count_up(a) + 1
-              else if (pos1_up(b)%elements(1:1) == 'H') then
+              else if ((pos1_up(b)%elements(1:1) == 'H').and.(pos1_up(b)%elements(1:2).ne.'He')) then
                 pos1_up(a)%point_x_y_z(c,bond_count_up(a),:) = pos1_up(b)%center_x_y_z(:) + 0.15D0*bond_vector(:)
                 bond_count_up(a) = bond_count_up(a) + 1
               else                                                             ! If not H -> place at the center of the bond
@@ -1410,10 +1410,10 @@ else                                                                           !
               end if
             else                                                               ! Add DN FOD
               c = pos1_dn(a)%n_shells                                          ! valence shell DN
-              if (pos1_up(a)%elements(1:1) == 'H') then                        ! for H bonds -> place FOD closer to H (0.85*bond length)
+              if ((pos1_up(a)%elements(1:1) == 'H').and.(pos1_up(a)%elements(1:2).ne.'He')) then                        ! for H bonds -> place FOD closer to H (0.85*bond length)
                 pos1_dn(a)%point_x_y_z(c,bond_count_dn(a),:) = pos1_dn(b)%center_x_y_z(:) + 0.85D0*bond_vector(:)
                 bond_count_dn(a) = bond_count_dn(a) + 1
-              else if (pos1_up(b)%elements(1:1) == 'H') then
+              else if ((pos1_up(b)%elements(1:1) == 'H').and.(pos1_up(b)%elements(1:2).ne.'He')) then
                 pos1_dn(a)%point_x_y_z(c,bond_count_dn(a),:) = pos1_dn(b)%center_x_y_z(:) + 0.15D0*bond_vector(:)
                 bond_count_dn(a) = bond_count_dn(a) + 1
               else                                                             ! If not H -> place at the center of the bond
