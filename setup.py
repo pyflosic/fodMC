@@ -18,5 +18,7 @@ setup(
    include_package_data=True,
    packages = ['fodMC/pyfodmc','fodMC/gui','fodMC/lib'],
    zip_safe=False,
-   ext_modules=[Extension(name='fodmc', sources=['fodMC/lib/fodmc.f90'], f2py_options=['--quiet'])]
+   ext_modules=[Extension(name='fodmc', sources=['fodMC/lib/fodmc.f90'], f2py_options=['--quiet'])],
+   install_requires=['numpy'],
+   setup_requires=['numpy']
 )
