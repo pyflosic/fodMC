@@ -21,7 +21,8 @@ def get_database(input_file='xx_database_xx'):
     o.close() 
 
 def clean_files(): 
-    files = ['CLUSTER','FRMORB','system','xx_database_xx']
+    #files = ['CLUSTER','FRMORB','system','xx_database_xx']
+    files = ['system','xx_database_xx']
     for f in files: 
         try:
             if os.path.exists(f):
@@ -49,7 +50,7 @@ def get_guess(output_mode,output_name):
     # put outfile on 1
     os.dup2(outfile, 1)
     # end magic
-    # FORTAN call 
+    # FORTAN call
     fodmc.fodmc_mod.get_guess(output_mode,output_name)
     # restore the standard output file descriptor
     os.dup2(save, 1)
@@ -93,13 +94,14 @@ def write_pyfodmc_molecules(sys,con_mat):
     f.close()
 
 if __name__ == "__main__":
+    from fodMC.pyfodmc import pyfodmc
     def make_atom():
         # Simple test for atoms 
         # creat input 
         write_pyfodmc_atoms(sys='Kr')
         # Fortran call 
 
-        output_mode = ['NRLMOL','PyFLOSIC'][1]
+        output_mode = ['NRLMOL','PyFLOSIC'][0]
         output_name = ['',      'Kr_FODs.xyz'][1]
         pyfodmc.get_guess(output_mode,output_name)
     
