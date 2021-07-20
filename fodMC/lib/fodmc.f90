@@ -708,7 +708,12 @@ else
     !
     ! For bonded atoms: get valence FOD radii from molecular geometry. Evaluate distances to adjacent atoms
     ! use distance between atoms as radii. Only relevant for lone FODs
-    !
+    ! TODO
+    ! KT: HERE adjust radius determination. Make sure that, e.g., all C atoms have the same radius. 
+    !     use  smallest/largest distance to all adjacent atoms?
+    ! do b = 1, number_of_centers
+    !     if con_mat(a,b) .neq. 0 then
+    !         check distance, and take whatever is smallest/largest
     else
       d_bond = 10.0D0
       do b = 1, number_of_centers

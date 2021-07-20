@@ -1,0 +1,7 @@
+- Use current code version
+
+- double-check FOD geometries! DONE
+
+- start optimization with pc-0, then go to pc-1, ending in pc-2 (maybe pc-3 and pc-4)
+- grid=(200,590)
+- Use all functionals
