@@ -1,13 +1,17 @@
 import setuptools
 from numpy.distutils.core import Extension, setup
 
+with open("fodMC/version.py", "r") as fh:
+    version = {}
+    exec(fh.read(), version)
+
 with open("README.md", "r") as fh:
      name="fodMC",                                                                          
      long_description = fh.read()  
 
 setup(
    name="fodMC",
-   version="1.0.14",
+   version=version["__version__"],
    author="Kai Trepte",
    author_email="kai.trepte1987@gmail.com",
    description="Fermi-orbital descriptor Monte-Carlo",
