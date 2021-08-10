@@ -821,7 +821,7 @@ end if
 ! DEFINE STEP SIZE
 step_size = 0.001D0
 ! DEFINE SCALING FACTOR FOR MULTIPLE BONDS/LONE FODS
-scale_r = 0.70D0
+scale_r = 0.65D0
 
 !!!write(6,*) ' '
 !!!!write(6,fmt='(A,I7,2X,A,2X,F7.4,2X,A,2X,F7.4)') 'Cycles:',cycles,' Step_size:',step_size,' Scale factor: ',scale_r
