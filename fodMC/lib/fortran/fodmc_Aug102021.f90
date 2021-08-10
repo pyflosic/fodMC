@@ -602,14 +602,6 @@ else
   !
   ! END OUTPUT
   !
-  ! Longest bond distance between all bonded atoms
-  ! Use this to determine the distance of all double/triple
-  ! bonds and lone FODs
-  ! Here, initialization
-  d_bond = 0.0D0
-  !
-  !
-  !
   do a = 1, number_of_centers
     !
     ! Get number of valence FODs from con_mat and lone_fods 
@@ -719,7 +711,7 @@ else
     ! TODO
     ! 
     ! KT: HERE adjust radius determination. Make sure that, e.g., all C atoms have the same radius. 
-    !     use largest distance to all adjacent atoms?
+    !     use  smallest/largest distance to all adjacent atoms?
     !
     !     Maybe use the same d_bond for ALL atoms?
     !     For this, use smallest bond distance between all bonded atoms?
@@ -728,9 +720,9 @@ else
     !     if con_mat(a,b) .neq. 0 then
     !         check distance, and take whatever is smallest/largest
     else
+      d_bond = 10.0D0
       do b = 1, number_of_centers
-        ! For bonded atoms
-        if (con_mat(a,b) /= 0 .or. con_mat(b,a) /= 0) then
+        if (a /= b) then
           ave_dist1 = sqrt(sum((pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:))**2))         ! take shortest distance to neighboring atoms -> use 1/2 of this as radius
           if (periodic) then                                                                          ! In a peridoic system, take cell vectors into account
             do c = 1, 3
@@ -746,42 +738,42 @@ else
             end do
           end if
 
-          if (ave_dist1 > d_bond) then
+          if (ave_dist1 < d_bond) then
             d_bond = ave_dist1
+            i = b                                                                                     ! store atom index
           end if
         end if
       end do
+      if (pos1_up(a)%elements == 'H' .or. pos1_up(i)%elements == 'H') then                            ! if the distance was taken to a H atoms -> take 1.85*distance/2.0 = 0.875*distance as radius. See further below as well
+        d_bond = d_bond*1.85D0
+      end if
+      
+      ! INITIALIZE THE POINTS ! Here for valence UP-FODs
+      b = pos1_up(a)%n_shells
+      do c = 1, pos1_up(a)%n_points(b)
+        pos1_up(a)%r_theta_phi(b,c,1:3) = (/ d_bond/2.0D0, real(pi/2.0,8), real(0.0,8) /)
+        pos2_up(a)%r_theta_phi(b,c,1:3) = pos1_up(a)%r_theta_phi(b,c,1:3)
+        pos1_up(a)%point_x_y_z(b,c,1:3) = (/ d_bond/2.0D0 + pos1_up(a)%center_x_y_z(1), &
+                                           & pos1_up(a)%center_x_y_z(2), pos1_up(a)%center_x_y_z(3) /)
+        pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
+      end do
+      ! INITIALIZE THE POINTS ! Here for valence DN-FODs
+      b = pos1_dn(a)%n_shells
+      do c = 1, pos1_dn(a)%n_points(b)
+        pos1_dn(a)%r_theta_phi(b,c,1:3) = (/ d_bond/2.0D0, real(pi/2.0,8), real(0.0,8) /)
+        pos2_dn(a)%r_theta_phi(b,c,1:3) = pos1_dn(a)%r_theta_phi(b,c,1:3)
+        pos1_dn(a)%point_x_y_z(b,c,1:3) = (/ d_bond/2.0D0 + pos1_dn(a)%center_x_y_z(1), &
+                                           & pos1_dn(a)%center_x_y_z(2), pos1_dn(a)%center_x_y_z(3) /)
+        pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
+      end do
     end if
+
     ! Deallocate temporary arrays
     deallocate(r_tmp_up)
     deallocate(r_tmp_dn)
     deallocate(N_tmp_up)
     deallocate(N_tmp_dn)
   end do
-
-  ! INITIALIZE THE POINTS ! 
-  ! d_bond was determined beforehand
-  do a = 1, number_of_centers
-    ! INITIALIZE THE POINTS ! Here for valence UP-FODs
-    b = pos1_up(a)%n_shells
-    do c = 1, pos1_up(a)%n_points(b)
-      pos1_up(a)%r_theta_phi(b,c,1:3) = (/ d_bond/2.0D0, real(pi/2.0,8), real(0.0,8) /)
-      pos2_up(a)%r_theta_phi(b,c,1:3) = pos1_up(a)%r_theta_phi(b,c,1:3)
-      pos1_up(a)%point_x_y_z(b,c,1:3) = (/ d_bond/2.0D0 + pos1_up(a)%center_x_y_z(1), &
-                                         & pos1_up(a)%center_x_y_z(2), pos1_up(a)%center_x_y_z(3) /)
-      pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
-    end do
-    ! INITIALIZE THE POINTS ! Here for valence DN-FODs
-    b = pos1_dn(a)%n_shells
-    do c = 1, pos1_dn(a)%n_points(b)
-      pos1_dn(a)%r_theta_phi(b,c,1:3) = (/ d_bond/2.0D0, real(pi/2.0,8), real(0.0,8) /)
-      pos2_dn(a)%r_theta_phi(b,c,1:3) = pos1_dn(a)%r_theta_phi(b,c,1:3)
-      pos1_dn(a)%point_x_y_z(b,c,1:3) = (/ d_bond/2.0D0 + pos1_dn(a)%center_x_y_z(1), &
-                                         & pos1_dn(a)%center_x_y_z(2), pos1_dn(a)%center_x_y_z(3) /)
-      pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
-    end do
-  end do
-
   !
   ! Put all 1s core FODs (index (1,1,1:3)) at the origin
   ! If NOT pseudopotential
