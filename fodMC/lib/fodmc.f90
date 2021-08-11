@@ -1031,12 +1031,12 @@ if (number_of_centers == 1) then
     d = 1
     do b = 1, pos1_up(d)%n_shells
       do c = 1, pos1_up(d)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+        write(19,fmt='(A3,4X,3(F13.8,2X))') 'X',pos1_up(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
       end do
     end do
     do b = 1, pos1_dn(d)%n_shells
       do c = 1, pos1_dn(d)%n_points(b)
-        write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+        write(19,fmt='(A4,3X,3(F13.8,2X))') 'He',pos1_dn(d)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
       end do
     end do
     close(unit=19)
@@ -1086,7 +1086,7 @@ if (number_of_centers == 1) then
       open(unit=19,file=output_name,status='unknown',action='write')
       write (junk, '(I8)') size(pos1_up)+sum(pos1_up(1)%n_points(:))+sum(pos1_dn(1)%n_points(:))                       ! number of entries in the xyz file
       write(19,fmt='(A)') adjustl(junk)
-      write(19,*) 'angstrom'
+      write(19,*) "sym_fod1='X' sym_fod2='He'"
       if (pos1_up(1)%elements(2:2)=='_'.or.pos1_up(1)%elements(2:2)=='') then
         write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(1)%elements(1:1),pos1_up(1)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
       else
@@ -3060,16 +3060,16 @@ else                                                                           !
     do a = 1, size(pos1_up)
       call cart_to_frac(cell_a(1:3),cell_b(1:3),cell_c(1:3),pos1_up(a)%center_x_y_z(1:3),pos2_up(a)%center_x_y_z(1:3))
       if (pos1_up(a)%elements(2:2) == '_') then
-        write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:1),pos2_up(a)%center_x_y_z(1:3)
+        write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(a)%elements(1:1),pos2_up(a)%center_x_y_z(1:3)
       else
-        write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:2),pos2_up(a)%center_x_y_z(1:3)
+        write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(a)%elements(1:2),pos2_up(a)%center_x_y_z(1:3)
       end if
     end do
     do a = 1, size(pos1_up)
       do b = 1, pos1_up(a)%n_shells
         do c = 1, pos1_up(a)%n_points(b)
           call cart_to_frac(cell_a(1:3),cell_b(1:3),cell_c(1:3),pos1_up(a)%point_x_y_z(b,c,1:3),pos2_up(a)%point_x_y_z(b,c,1:3))
-          write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos2_up(a)%point_x_y_z(b,c,1:3)
+          write(19,fmt='(A3,4X,3(F13.8,2X))') 'X',pos2_up(a)%point_x_y_z(b,c,1:3)
         end do
       end do
     end do
@@ -3077,7 +3077,7 @@ else                                                                           !
       do b = 1, pos1_dn(a)%n_shells
         do c = 1, pos1_dn(a)%n_points(b)
           call cart_to_frac(cell_a(1:3),cell_b(1:3),cell_c(1:3),pos1_dn(a)%point_x_y_z(b,c,1:3),pos2_dn(a)%point_x_y_z(b,c,1:3))
-          write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos2_dn(a)%point_x_y_z(b,c,1:3)
+          write(19,fmt='(A4,3X,3(F13.8,2X))') 'He',pos2_dn(a)%point_x_y_z(b,c,1:3)
         end do
       end do
     end do
@@ -3145,25 +3145,25 @@ else                                                                           !
     open(unit=19,file=output_name,status='unknown',action='write')
     write (junk, '(I4)') size(pos1_up)+counter_up+counter_dn                     ! number of entries in the xyz file
     write(19,fmt='(A)') adjustl(junk)
-    write(19,fmt='(A)') 'angstrom'
+    write(19,fmt='(A)') "sym_fod1='X' sym_fod2='He'"
     do a = 1, size(pos1_up)
       if (pos1_up(a)%elements(2:2) == '_') then
-        write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:1),pos1_up(a)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
+        write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(a)%elements(1:1),pos1_up(a)%center_x_y_z(1:3)*0.529177D0/units_factor ! always in angstrom
       else
-        write(19,fmt='(A,3X,3(F13.8,2X))') pos1_up(a)%elements(1:2),pos1_up(a)%center_x_y_z(1:3)*0.529177D0/units_factor
+        write(19,fmt='(A4,3X,3(F13.8,2X))') pos1_up(a)%elements(1:2),pos1_up(a)%center_x_y_z(1:3)*0.529177D0/units_factor
       end if
     end do
     do a = 1, size(pos1_up)
       do b = 1, pos1_up(a)%n_shells
         do c = 1, pos1_up(a)%n_points(b)
-          write(19,fmt='(A,3X,3(F13.8,2X))') 'X',pos1_up(a)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+          write(19,fmt='(A3,4X,3(F13.8,2X))') 'X',pos1_up(a)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
         end do
       end do
     end do
     do a = 1, size(pos1_up)
       do b = 1, pos1_dn(a)%n_shells
         do c = 1, pos1_dn(a)%n_points(b)
-          write(19,fmt='(A,3X,3(F13.8,2X))') 'He',pos1_dn(a)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
+          write(19,fmt='(A4,3X,3(F13.8,2X))') 'He',pos1_dn(a)%point_x_y_z(b,c,1:3)*0.529177D0/units_factor
         end do
       end do
     end do
