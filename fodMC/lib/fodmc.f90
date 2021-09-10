@@ -719,10 +719,7 @@ else
     ! TODO
     ! 
     ! KT: HERE adjust radius determination. Make sure that, e.g., all C atoms have the same radius. 
-    !     use largest distance to all adjacent atoms?
-    !
-    !     Maybe use the same d_bond for ALL atoms?
-    !     For this, use smallest bond distance between all bonded atoms?
+    !     use largest distance to all adjacent atoms
     !
     ! do b = 1, number_of_centers
     !     if con_mat(a,b) .neq. 0 then
@@ -758,6 +755,9 @@ else
     deallocate(N_tmp_up)
     deallocate(N_tmp_dn)
   end do
+
+  ! KT: HERE
+  ! Do this only for bonded atoms??
 
   ! INITIALIZE THE POINTS ! 
   ! d_bond was determined beforehand
@@ -879,10 +879,11 @@ if (number_of_centers == 1) then
                         pos1_up(a)%center_x_y_z(1:3),pos1_up(a)%point_x_y_z(b,c,1:3))
       !
       ! invert motif if b is an even number
+      ! KT: TODO inversion needs to be with respect to atomic position!!!
       !
-      if (mod(b,2) == 0) then
-        pos1_up(a)%point_x_y_z(b,c,1:3) = -1.0D0*pos1_up(a)%point_x_y_z(b,c,1:3)
-      end if
+      !!!if (mod(b,2) == 0) then
+      !!!  pos1_up(a)%point_x_y_z(b,c,1:3) = -1.0D0*pos1_up(a)%point_x_y_z(b,c,1:3)
+      !!!end if
 
       pos2_up(a)%point_x_y_z(b,c,1:3) = pos1_up(a)%point_x_y_z(b,c,1:3)
     end do
@@ -930,10 +931,11 @@ if (number_of_centers == 1) then
                         pos1_dn(a)%center_x_y_z(1:3),pos1_dn(a)%point_x_y_z(b,c,1:3))
       !
       ! invert motif if b is an odd number
+      ! KT: TODO inversion needs to be wrt atomic position
       !
-      if (mod(b,2) == 1) then
-        pos1_dn(a)%point_x_y_z(b,c,1:3) = -1.0D0*pos1_dn(a)%point_x_y_z(b,c,1:3)
-      end if
+      !!if (mod(b,2) == 1) then
+      !!  pos1_dn(a)%point_x_y_z(b,c,1:3) = -1.0D0*pos1_dn(a)%point_x_y_z(b,c,1:3)
+      !!end if
       pos2_dn(a)%point_x_y_z(b,c,1:3) = pos1_dn(a)%point_x_y_z(b,c,1:3)
     end do
     !
@@ -1243,6 +1245,15 @@ else                                                                           !
           counter = counter + 1
         end if
       end do
+
+      !
+      ! If only one bond partner -> linear 
+      !   no good right now: Transforms lone FODs instead of bond FODs for CO2
+      !!if (counter == 1) then
+      !!  is_planar_linear(a) = 2
+      !!end if
+
+
       !
       ! When an atom has exactly two bonds -> check whether it is in a linear environment or not -> dot product of the bond vectors needs to be -1 or 1 (angle either 0 or 180)
       ! If not -> planar
@@ -1364,8 +1375,6 @@ else                                                                           !
 !
 ! DONE planarity/linearity check
 !
-
-
 
 !
 ! Find centers between atoms. Place as many FODs around these as defined in con_mat. 
@@ -1641,6 +1650,19 @@ else                                                                           !
               !!!  end if
               !!!end do
               !
+              !!
+              ! KT: HERE  why doesn't this work for CO2, LT guess?
+              !         - O are not identified as linear
+              !         - if enforced, lone FODs move -> WHY?
+              !         - if this is fixed: assign all atoms with one neighbour as linear
+              !    RETHINK THE FOLLOWING!
+              !
+              !         Problem: We analyze 1/r maybe to initial positions of bond FODs per atom -> no good
+              !         - MAYBE we have to do this outside the current loop, once everything is set!!!
+              !                 TO BE DONE
+              !                        Careful: Only compare to bond FODs!! Lone FODs have not been set yet!!!!!!!!!!
+
+              !
               ! analyze whether atoms is in an linear environemnt.
               ! If so -> minimize 1/r to neighbouring FODs via rotations
               !
@@ -1664,7 +1686,9 @@ else                                                                           !
                         i = pos1_up(f)%n_shells
                         do g = 1, pos1_up(f)%n_points(i)
                           ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
-                                                       & pos2_up(f)%point_x_y_z(i,g,:))**2))
+                                                       & pos2_up(f)%point_x_y_z(i,g,:))**2))  ! maybe only use bond FODs here...
+                                                                                              ! maybe this needs tobe done outside
+                                                                                              ! the current loop
                         end do
                       end if
                     end do
@@ -1939,6 +1963,95 @@ else                                                                           !
       end do
     end if
   end do
+
+
+!! KT: Aug 17 2021: Try to fix this....
+!!!!!  !
+!!!!!  ! ROTATE BOND FODs if linear environment
+!!!!!  !
+!!!!!  do a = 1, size(pos1_up)
+!!!!!    do b = 1, size(pos1_up)
+!!!!!      if (a /= b) then
+!!!!!        ! If so -> minimize 1/r to neighbouring bond FODs via rotations
+!!!!!        !
+!!!!!        if (is_planar_linear(a) == 2) then
+!!!!!          !
+!!!!!          ! get bond center and vector describing the bond
+!!!!!          !
+!!!!!          bond_center(:) = (pos1_up(a)%center_x_y_z(:) + pos1_up(b)%center_x_y_z(:))/2.0D0
+!!!!!          bond_vector(:) =  pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:) ! vector from b to a          
+!!!!!          if (periodic) then                                                        ! In a peridoic system, take cell vectors into account
+!!!!!            do c = 1, 3
+!!!!!              do d = 1, 3
+!!!!!                do e = 1, 3
+!!!!!                  if (sqrt(sum((pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:) + &
+!!!!!                               (c-2)*cell_a(:) + (d-2)*cell_b(:) + (e-2)*cell_c(:))**2)) < &
+!!!!!                               (sqrt(sum(bond_vector(:)**2)))) then
+!!!!!                    bond_center(:) = (pos1_up(a)%center_x_y_z(:) + pos1_up(b)%center_x_y_z(:) + &
+!!!!!                                     (c-2)*cell_a(:) + (d-2)*cell_b(:) + (e-2)*cell_c(:))/2.0D0
+!!!!!                    bond_vector(:) = pos1_up(a)%center_x_y_z(:) - pos1_up(b)%center_x_y_z(:) + &
+!!!!!                                     (c-2)*cell_a(:) + (d-2)*cell_b(:) + (e-2)*cell_c(:)
+!!!!!                  end if
+!!!!!                end do
+!!!!!              end do
+!!!!!            end do
+!!!!!          end if
+!!!!!
+!!!!!          c = pos1_up(a)%n_shells                                        ! valence shell UP
+!!!!!
+!!!!!          ave_dist1 = 10000000.0
+!!!!!          do d = 1, cycles
+!!!!!            ave_dist2 = 0.0
+!!!!!            !
+!!!!!            ! generate rotation matrix for bond rotation. Rotate positions
+!!!!!            ! Rotate ALL positions in the same way
+!!!!!            !
+!!!!!            call create_rotMat_bond(full_rot,bond_vector,step_size)
+!!!!!            do e = 1, con_mat(a,b)
+!!!!!              call rotate_pos(full_rot, pos1_up(a)%point_x_y_z(c,bond_count_up(a)-e,:), &
+!!!!!                            & bond_center, pos2_up(a)%point_x_y_z(c,bond_count_up(a)-e,:))
+!!!!!              !
+!!!!!              ! evaluate 1/r
+!!!!!              !   1/r with valence FODs of the atom itself
+!!!!!              do g = 1, pos1_up(a)%n_points(c)
+!!!!!                ! exclude evaluation with itself
+!!!!!                if (g /= bond_count_up(a) - e) then
+!!!!!                  ave_dist2 = ave_dist2 + 1.0D0/sqrt(sum((pos2_up(a)%point_x_y_z(c,bond_count_up(a) - e,:) - &
+!!!!!                                               & pos2_up(a)%point_x_y_z(c,g,:))**2))  
+!!!!!                end if
+!!!!!              end do
+!!!!!            end do
+!!!!!            !
+!!!!!            ! Keep configuration?
+!!!!!            !
+!!!!!            if (ave_dist2 < ave_dist1) then
+!!!!!              do f = 1, con_mat(a,b)
+!!!!!                pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:) = pos2_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)
+!!!!!              end do
+!!!!!              ave_dist1 = ave_dist2
+!!!!!            else
+!!!!!              do f = 1, con_mat(a,b)
+!!!!!                pos2_up(a)%point_x_y_z(c,bond_count_up(a)-f,:) = pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)
+!!!!!              end do
+!!!!!            end if
+!!!!!          end do
+!!!!!        end if
+!!!!!
+!!!!!        !
+!!!!!        ! If same number of UP and DN FODs in the bond -> just pair them right here (regarding the respective other atoms!) and
+!!!!!        ! itself 
+!!!!!        !
+!!!!!        if (con_mat(a,b) == con_mat(b,a)) then
+!!!!!          do f = 1, con_mat(a,b)
+!!!!!            g = pos1_dn(b)%n_shells
+!!!!!            pos1_dn(b)%point_x_y_z(g,bond_count_dn(b),:) = pos1_up(a)%point_x_y_z(c,bond_count_up(a)-f,:)
+!!!!!            bond_count_dn(b) = bond_count_dn(b) + 1
+!!!!!          end do
+!!!!!        end if
+!!!!!      end if
+!!!!!    end do
+!!!!!  end do 
+
 
 
 !
