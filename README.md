@@ -5,7 +5,7 @@
 [![version](https://img.shields.io/badge/version-1.0.14-lightgrey)](https://github.com/pyflosic/fodMC/blob/master/README.md)
 [![doi](https://img.shields.io/badge/DOI-10.5281/zenodo.3922473-blue)](https://zenodo.org/record/3922473#.Xvor5aYpCCg)
 
-Attention: This version as of October 21th, 2021. Current development are carried out at GitLab (https://gitlab.com/kaitrepte/fodMC)
+Attention: This is the version as of October 21th, 2021. Current development are carried out at GitLab (https://gitlab.com/kaitrepte/fodMC)
 
 Main developer:  
 
